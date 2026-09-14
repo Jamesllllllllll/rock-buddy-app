@@ -12,8 +12,9 @@ const { spawn } = require('child_process');
 const { unzipSync } = require('node:zlib');
 
 // Process input args
-const args = process.argv.slice(2);
-const host = args[0] || 'https://rock-buddy.com';
+const { resolveBackend } = require('./backend-config');
+const backend = resolveBackend(process.argv.slice(app.isPackaged ? 1 : 2));
+const host = backend.host;
 
 const currentVersion = require('../package.json').version;
 let onLatestVersion = false;
@@ -22,7 +23,7 @@ let onLatestVersion = false;
 const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
 
 // Store for user config data
-const store = new Store();
+const store = new Store(backend.storeOptions);
 
 // Define Rocksmith app ID
 const rocksmithAppId = 221680;
@@ -278,7 +279,8 @@ function createWindow() {
         height: screenHeight,
         webPreferences: {
             preload: path.join(__dirname, '..', 'dist', 'preload.js'),
-            backgroundThrottling: false
+            backgroundThrottling: false,
+            ...backend.webPreferences
         },
         icon: path.join(__dirname, '..', 'images', 'favicon.ico')
     });

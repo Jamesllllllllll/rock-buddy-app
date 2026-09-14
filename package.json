@@ -7,7 +7,10 @@
         "build": "python pre_build.py && tsc && webpack --mode=development",
         "start": "npm run build && electron .",
         "dev": "npm run build && electron . http://raspberrypi:8080",
-        "release": "git clean -dfX && git submodule foreach --recursive git clean -dfX && npm install && npm run build && electron-builder"
+        "release": "git clean -dfX && git submodule foreach --recursive git clean -dfX && npm install && npm run build && electron-builder",
+        "test": "node --test tests/*.test.js",
+        "start:staging": "npm run build && electron . --backend=staging",
+        "start:local": "npm run build && electron . --backend=local"
     },
     "author": "TNTMusicStudios",
     "license": "MIT",
