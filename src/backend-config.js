@@ -6,12 +6,13 @@ const HOSTS = Object.freeze({
     local: 'http://localhost:8787',
 });
 
-function resolveBackend(args = []) {
+function resolveBackend(args = [], packagedBackend = "production") {
+    if (!["production", "staging"].includes(packagedBackend)) throw new Error("Unknown packaged backend.");
     const selectors = args.filter(arg => arg.startsWith('--backend=') || !arg.startsWith('-'));
     if (args.includes('--backend') || selectors.length > 1) {
         throw new Error('Use one --backend=production|staging|local selector or one backend URL.');
     }
-    const selected = selectors[0] || '--backend=production';
+    const selected = selectors[0] || `--backend=${packagedBackend}`;
     const name = selected.startsWith('--backend=') ? selected.slice(10) : null;
     if (name !== null && !Object.hasOwn(HOSTS, name)) {
         throw new Error('Unknown Rock Buddy backend.');
@@ -22,6 +23,9 @@ function resolveBackend(args = []) {
         throw new Error('The backend must be an HTTP(S) origin without credentials, path, or query.');
     }
     const host = url.origin;
+    if (packagedBackend === "staging" && host !== HOSTS.staging) {
+        throw new Error("Rock Buddy Staging only connects to staging.");
+    }
     if (host === HOSTS.production) return { host, storeOptions: {}, webPreferences: {} };
     const suffix = host === HOSTS.staging ? 'staging' :
         host === HOSTS.local ? 'local' : createHash('sha256').update(host).digest('hex').slice(0, 16);

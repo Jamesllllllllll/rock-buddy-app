@@ -10,7 +10,8 @@
         "release": "git clean -dfX && git submodule foreach --recursive git clean -dfX && npm install && npm run build && electron-builder",
         "test": "node --test tests/*.test.js",
         "start:staging": "npm run build && electron . --backend=staging",
-        "start:local": "npm run build && electron . --backend=local"
+        "start:local": "npm run build && electron . --backend=local",
+        "package:staging": "electron-builder --config electron-builder.staging.cjs --win nsis --x64 --publish never"
     },
     "author": "TNTMusicStudios",
     "license": "MIT",

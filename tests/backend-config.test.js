@@ -36,3 +36,16 @@ test('CSP permits the named backends without allowing every HTTPS origin', () =>
     for (const host of Object.values(HOSTS)) assert.ok(connect.includes(host));
     assert.ok(!connect.includes('*') && !connect.includes('https:'));
 });
+
+test('staging installers select staging without flags and reject backend overrides', () => {
+    const staging = resolveBackend([], 'staging');
+    assert.equal(staging.host, HOSTS.staging);
+    assert.equal(staging.storeOptions.name, 'config-staging');
+    assert.equal(staging.webPreferences.partition, 'persist:rock-buddy-staging');
+    assert.deepEqual(resolveBackend(['--remote-debugging-port=9333'], 'staging'), staging);
+    assert.deepEqual(resolveBackend(['--backend=staging'], 'staging'), staging);
+    for (const args of [['--backend=production'], [HOSTS.production], ['--backend=local'], ['https://example.invalid']]) {
+        assert.throws(() => resolveBackend(args, 'staging'), /only connects to staging/);
+    }
+    assert.throws(() => resolveBackend([], 'unknown'), /Unknown packaged backend/);
+});

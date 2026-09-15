@@ -71,3 +71,10 @@ For information, visit <a href="https://rock-buddy.com/" target="_blank">rock-bu
 TNTMusicStudios - tntmusicstudios2018@gmail.com
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Migration development
+
+Download **Rock Buddy Staging** from [this fork’s prereleases](https://github.com/Jamesllllllllll/rock-buddy-app/releases)
+for Cloudflare backend testing. It installs separately and selects staging automatically.
+See [testing and build instructions](docs/staging.md). Production downloads stay on the
+owner's repository; automatic download/install/restart remains planned.

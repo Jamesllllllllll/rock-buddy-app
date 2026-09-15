@@ -12,11 +12,15 @@ const { spawn } = require('child_process');
 const { unzipSync } = require('node:zlib');
 
 // Process input args
-const { resolveBackend } = require('./backend-config');
-const backend = resolveBackend(process.argv.slice(app.isPackaged ? 1 : 2));
+const { HOSTS, resolveBackend } = require('./backend-config');
+const packageInfo = require('../package.json');
+const backend = resolveBackend(process.argv.slice(app.isPackaged ? 1 : 2), packageInfo.rockBuddyBackend);
+// Packaged assets and writable bundled helpers are relative to the install directory,
+// including launches from Explorer, shortcuts, or another working directory.
+if (app.isPackaged) process.chdir(path.dirname(app.getPath('exe')));
 const host = backend.host;
 
-const currentVersion = require('../package.json').version;
+const currentVersion = packageInfo.version;
 let onLatestVersion = false;
 
 // Check if in dev environment
@@ -87,6 +91,8 @@ async function getAllReleases(owner, repo) {
 }
 
 function checkForUpdates(win) {
+    // Test builds must never direct users to a production installer.
+    if (host !== HOSTS.production) return;
     console.log("Checking for updates...");
 
     const owner = 'tnt-coders';

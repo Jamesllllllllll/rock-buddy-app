@@ -6,7 +6,7 @@ permissions:
 jobs:
   build_on_win:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -25,3 +25,61 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Publish self-contained RockSniffer for staging
+        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+        run: dotnet publish RockSniffer/RockSniffer/RockSniffer.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:LangVersion=12.0 -o .generated/rocksniffer-staging
+      - name: Package staging installer
+        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+        run: npm run package:staging
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Install and smoke-test the packaged app
+        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+        run: node tooling/smoke-staging-installer.cjs
+      - name: Checksum staging installer
+        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+        shell: pwsh
+        run: |
+          Get-ChildItem release/staging/*-Setup.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          } | Set-Content release/staging/SHA256SUMS.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+        with:
+          name: rock-buddy-staging-windows
+          path: |
+            release/staging/*-Setup.exe
+            release/staging/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-staging:
+    needs: build_on_win
+    if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      STAGING_TAG: staging-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: rock-buddy-staging-windows
+          path: installer
+      - name: Publish staging prerelease
+        run: |
+          cat > notes.md <<'NOTES'
+          Download and run the Setup.exe, then open **Rock Buddy Staging**.
+
+          This separate installation connects only to Cloudflare staging and keeps its own settings and login. RockSniffer and its .NET runtime are bundled; no developer tools are required.
+
+          Close regular Rock Buddy before gameplay testing. Production accounts are not in staging. Use `FixtureLead` with password `Synthetic Rock Buddy password!` for the initial test.
+
+          Windows installer/startup/isolation checks run in CI. Real Rocksmith gameplay remains to be tested. This preview is unsigned and Windows may show an unknown-publisher warning. Automatic updates are not enabled.
+          NOTES
+          gh release create "$STAGING_TAG" installer/*-Setup.exe installer/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "Rock Buddy Staging — build $GITHUB_RUN_NUMBER" \
+            --notes-file notes.md --prerelease --latest=false
