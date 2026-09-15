@@ -60,12 +60,13 @@ const { HOSTS } = require('../src/backend-config');
             if (child.exitCode !== null) throw new Error(`Installed app exited: ${child.exitCode}`);
             try {
                 const targets = await (await fetch('http://127.0.0.1:9333/json/list', { signal: AbortSignal.timeout(1000) })).json();
-                target = targets.find(page => page.type === 'page' && page.url.startsWith('file:'));
+                // Wait for startup's auth redirect before changing synthetic local settings.
+                target = targets.find(page => page.type === 'page' && page.url.startsWith('file:') && page.url.endsWith('/auth/login.html'));
                 if (target) break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 500));
         }
-        assert.ok(target, 'Installed app must create its window');
+        assert.ok(target, 'Installed app must reach its login page');
         socket = new WebSocket(target.webSocketDebuggerUrl);
         await new Promise((resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }); });
         const response = await new Promise((resolve, reject) => {
@@ -89,7 +90,8 @@ const { HOSTS } = require('../src/backend-config');
                 awaitPromise: true, returnByValue: true,
             } }));
         });
-        assert.ok(!response.result?.exceptionDetails, 'Preload and renderer must load');
+        assert.ok(!response.error && !response.result?.exceptionDetails,
+            'Preload/renderer check failed: ' + JSON.stringify(response.error || response.result?.exceptionDetails));
         assert.equal(response.result.result.value.host, HOSTS.staging);
         assert.equal(response.result.result.value.sentinel, null);
         for (const config of response.result.result.value.detected) {
