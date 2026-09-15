@@ -52,13 +52,20 @@ const { HOSTS } = require('../src/backend-config');
                 if (data.id === 1) { clearTimeout(timer); resolve(data); }
             });
             socket.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: {
-                expression: '(async () => ({host: await window.api.getHost(), sentinel: await window.api.storeGet("stagingSmokeSentinel")}))()',
+                expression: '(async () => ({host: await window.api.getHost(), version: await window.api.getVersion(), sentinel: await window.api.storeGet("stagingSmokeSentinel")}))()',
                 awaitPromise: true, returnByValue: true,
             } }));
         });
         assert.ok(!response.result?.exceptionDetails, 'Preload and renderer must load');
         assert.equal(response.result.result.value.host, HOSTS.staging);
         assert.equal(response.result.result.value.sentinel, undefined);
+        const versionCheck = await fetch(HOSTS.staging + '/api/auth/login.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ version: response.result.result.value.version }),
+            signal: AbortSignal.timeout(10000),
+        });
+        assert.equal(versionCheck.status, 400, 'Packaged version must pass the live API version gate');
+        assert.deepEqual(await versionCheck.json(), { error: 'Invalid JSON data.' });
         assert.equal(fs.readFileSync(productionConfig, 'utf8'), sentinel);
         assert.ok(fs.existsSync(path.join(process.env.APPDATA, 'rock-buddy-staging/config-staging.json')));
         console.log('NSIS install, packaged startup, staging routing, runtime bundling, and production settings isolation passed.');

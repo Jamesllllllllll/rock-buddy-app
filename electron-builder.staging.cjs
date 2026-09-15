@@ -1,7 +1,6 @@
 const base = require('./package.json').build;
 const run = process.env.GITHUB_RUN_NUMBER || '0';
-const attempt = process.env.GITHUB_RUN_ATTEMPT || '0';
-if (!/^\d+$/.test(run) || !/^\d+$/.test(attempt)) throw new Error('Invalid build number');
+if (!/^\d+$/.test(run)) throw new Error('Invalid build number');
 module.exports = {
     ...base,
     extends: null,
@@ -11,7 +10,8 @@ module.exports = {
     extraMetadata: {
         name: 'rock-buddy-staging',
         rockBuddyBackend: 'staging',
-        version: `1.11.0-staging.${run}.${attempt}`,
+        // The legacy desktop API accepts betaN, not arbitrary semver prerelease labels.
+        version: `1.11.0-beta${run}`,
     },
     buildVersion: `1.11.0.${run}`,
     directories: { output: 'release/staging' },
