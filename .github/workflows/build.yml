@@ -44,6 +44,7 @@ jobs:
           $nsis = Join-Path $root 'nsis-bundle/windows'
           # electron-builder 26 expects the compiler in Bin rather than the bundle root.
           Copy-Item "$nsis/makensis.exe" "$nsis/Bin/makensis.exe"
+          Copy-Item "$root/nsis-bundle/elevate.exe" "$nsis/elevate.exe"
           "ELECTRON_BUILDER_NSIS_DIR=$nsis" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Package staging installer
         if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
