@@ -10,6 +10,7 @@ const glob = require('glob');
 const semver = require('semver');
 const { spawn } = require('child_process');
 const { unzipSync } = require('node:zlib');
+const { resolveRocksmithConfig } = require('./rocksmith-config');
 
 // Process input args
 const { HOSTS, resolveBackend } = require('./backend-config');
@@ -221,11 +222,14 @@ function getSteamProfiles(steamUserDataPath) {
 
 function getRocksmithProfiles(steamUserDataPath, steamProfile) {
     let profiles = {};
+    if (!steamUserDataPath || !steamProfile) return profiles;
     const rocksmithDataFolder = path.join(steamUserDataPath, steamProfile.toString(), rocksmithAppId.toString(), 'remote');
     const localProfilesFile = path.join(rocksmithDataFolder, 'LocalProfiles.json');
+    if (!fs.existsSync(localProfilesFile)) return profiles;
 
     // Read the localProfiles.json file to get the list of available profiles
     const localProfiles = readRocksmithData(localProfilesFile);
+    if (!Array.isArray(localProfiles?.Profiles)) return profiles;
     localProfiles['Profiles'].forEach((profile) => {
         profiles[profile['PlayerName']] = profile['UniqueID'];
     });
@@ -663,6 +667,10 @@ function createWindow() {
     });
 
     // Gets a map of Steam profiles and their corresponding folder names
+    ipcMain.handle('resolve-rocksmith-config', () => {
+        return resolveRocksmithConfig(store, store.get('auth_data')?.user_id, getSteamProfiles, getRocksmithProfiles);
+    });
+
     ipcMain.handle('get-steam-profiles', (event, steamUserDataPath) => {
         return getSteamProfiles(steamUserDataPath);
     });

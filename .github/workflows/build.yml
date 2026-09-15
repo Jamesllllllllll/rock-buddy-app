@@ -78,7 +78,9 @@ jobs:
 
           Close regular Rock Buddy before gameplay testing. Production accounts are not in staging. Use `FixtureLead` with password `Synthetic Rock Buddy password!` for the initial test.
 
-          Windows installer/startup/isolation checks run in CI. Real Rocksmith gameplay remains to be tested. This preview is unsigned and Windows may show an unknown-publisher warning. Automatic updates are not enabled.
+          Fresh accounts now discover a single local Rocksmith profile when Sniffer starts, without visiting Config. Saved choices are preserved; multiple profiles require selection in Config. Shared Rocksmith saves still import the same unverified history into each account without replacing verified scores.
+
+          Windows installer/startup/isolation and profile-discovery checks run in CI. Earlier staging gameplay checks passed; repeat fresh-account startup on this build. This preview is unsigned and Windows may show an unknown-publisher warning. Automatic updates are not enabled.
           NOTES
           gh release create "$STAGING_TAG" installer/*-Setup.exe installer/SHA256SUMS.txt \
             --target "$GITHUB_SHA" --title "Rock Buddy Staging — build $GITHUB_RUN_NUMBER" \

@@ -29,13 +29,17 @@ async function getSteamUserDataPath() {
 
     const steamUserDataPath = await api.getPath(defaultPath);
     if (steamUserDataPath !== null) {
+        if (steamUserDataPath !== await api.storeGet('user_data.' + userId + '.steam_user_data_path')) {
+            await api.storeDelete('user_data.' + userId + '.steam_profile');
+            await api.storeDelete('user_data.' + userId + '.rocksmith_profile');
+        }
         document.getElementById('steam_user_data_path').innerText = steamUserDataPath;
         await api.storeSet('user_data.' + userId + '.steam_user_data_path', steamUserDataPath);
         sessionStorage.setItem('steam_user_data_path', steamUserDataPath);
     }
 
     // Recall the main function to populate the rest of the display
-    main();
+    await main();
 }
 
 async function getSteamProfiles() {
@@ -47,7 +51,7 @@ async function getSteamProfiles() {
 
     // If a profile is already saved, remember it
     let selectedProfile = await api.storeGet('user_data.' + userId + '.steam_profile');
-    if (profileNames.length !== 0 && selectedProfile === null) {
+    if (profileNames.length === 1 && selectedProfile === null) {
         selectedProfile = steamProfiles[profileNames[0]];
         await api.storeSet('user_data.' + userId + '.steam_profile', selectedProfile);
         sessionStorage.setItem('steam_profile', selectedProfile);
@@ -55,6 +59,7 @@ async function getSteamProfiles() {
 
     // Build the combo box
     const comboBox = document.querySelector('#steam_profile');
+    comboBox.replaceChildren(new Option('Select Steam profile', ''));
     profileNames.forEach((profileName) => {
         const option = document.createElement('option');
         option.text = profileName;
@@ -69,15 +74,19 @@ async function getSteamProfiles() {
     });
 
     // Link the combo box selected option to the saved Steam profile
-    comboBox.addEventListener('change', async () => {
+    comboBox.onchange = async () => {
         const selectedOption = comboBox.options[comboBox.selectedIndex];
         const selectedProfile = selectedOption.value;
+        if (!selectedProfile) return;
+        await api.storeSet('user_data.' + userId + '.steam_user_data_path', steamUserDataPath);
         await api.storeSet('user_data.' + userId + '.steam_profile', selectedProfile);
+        await api.storeDelete('user_data.' + userId + '.rocksmith_profile');
         sessionStorage.setItem('steam_profile', selectedProfile);
+        await api.resolveRocksmithConfig();
 
         // Populate the combo box for Rocksmith profiles
         await getRocksmithProfiles();
-    });
+    };
 }
 
 async function getRocksmithProfiles() {
@@ -90,7 +99,7 @@ async function getRocksmithProfiles() {
 
     // If a profile is already saved, remember it
     let selectedProfile = await api.storeGet('user_data.' + userId + '.rocksmith_profile');
-    if (profileNames.length !== 0 && selectedProfile === null) {
+    if (profileNames.length === 1 && selectedProfile === null) {
         selectedProfile = rocksmithProfiles[profileNames[0]];
         await api.storeSet('user_data.' + userId + '.rocksmith_profile', selectedProfile);
         sessionStorage.setItem('rocksmith_profile', selectedProfile);
@@ -98,6 +107,7 @@ async function getRocksmithProfiles() {
 
     // Build the combo box
     const comboBox = document.querySelector('#rocksmith_profile');
+    comboBox.replaceChildren(new Option('Select Rocksmith profile', ''));
     profileNames.forEach((profileName) => {
         const option = document.createElement('option');
         option.text = profileName;
@@ -112,12 +122,14 @@ async function getRocksmithProfiles() {
     });
 
     // Link the combo box selected option to the saved Rocksmith profile
-    comboBox.addEventListener('change', async () => {
+    comboBox.onchange = async () => {
         const selectedOption = comboBox.options[comboBox.selectedIndex];
         const selectedProfile = selectedOption.value;
+        if (!selectedProfile) return;
+        await api.storeSet('user_data.' + userId + '.steam_user_data_path', steamUserDataPath);
         await api.storeSet('user_data.' + userId + '.rocksmith_profile', selectedProfile);
         sessionStorage.setItem('rocksmith_profile', selectedProfile);
-    });
+    };
 }
 
 async function getCustomMissSFXPath() {
@@ -480,12 +492,12 @@ async function main() {
 
     // Get preferences
     await getPreferences();
+    await api.resolveRocksmithConfig();
 
     // Populate Steam user data path if there is a default set
     let steamUserDataPath = await api.storeGet('user_data.' + userId + '.steam_user_data_path');
     if (steamUserDataPath === null) {
         steamUserDataPath = await api.storeGet('default_steam_user_data_path');
-        await api.storeSet('user_data.' + userId + '.steam_user_data_path', steamUserDataPath);
     }
     if (steamUserDataPath !== null) {
         document.getElementById('steam_user_data_path').innerText = steamUserDataPath;

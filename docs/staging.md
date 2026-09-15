@@ -10,6 +10,18 @@ session. It always connects to `https://rock-buddy-site-staging.rock-buddy.worke
 and rejects overrides to production/local. It does not offer production updates.
 Close regular Rock Buddy before testing so only one app monitors Rocksmith.
 
+Sniffer initializes missing account settings automatically when exactly one valid
+Rocksmith save is found in the default Steam userdata folder or a previously browsed
+folder. Existing account selections are preserved. Multiple eligible profiles or
+missing saved files require a choice in Config; visiting Config does not choose an
+arbitrary first profile. A nonstandard Steam folder may need Browse once.
+
+Separate Rock Buddy accounts can still read the same local Rocksmith save. Sync
+imports that save's mastery, streak, play counts, and Score Attack records into the
+logged-in account. Imported Learn A Song scores stay **unverified** and cannot
+replace a verified result. Only a verified run under the current account verifies
+its score. Use separate Rocksmith profiles if the players need separate game history.
+
 1. Log in with `FixtureLead` / `Synthetic Rock Buddy password!`, or create a staging
    account using an approved test inbox. Production accounts are not imported.
 2. In Config, select Steam data/profile and Rocksmith profile; turn Lurk Mode off.
@@ -24,6 +36,68 @@ The verified-score path has no durable replay queue. Test connection failures an
 plan a gameplay/submission pause during backend cutover. The
 [site migration plan](https://github.com/Jamesllllllllll/rock-buddy-site/blob/feat/typescript-foundation/docs/migration-plan.md)
 tracks backend acceptance; Windows gameplay remains a manual gate.
+
+## Remaining Windows walkthrough
+
+Lead/Rhythm, lower-score preservation, unverified-to-verified replacement, restart
+retrieval, Hard Score Attack, profile totals, and competitive ranking updates have
+passed. James has no bass; real Bass gameplay needs another tester and remains open.
+
+1. **Master Score Attack:** use a Lead/Rhythm chart with Master available. Finish
+   the run, then select Game Mode → Score Attack, the played Path, and Difficulty →
+   Master in Sniffer/Search. Compare the numeric score, restart, and retrieve it
+   again. Hard must retain its separate result. If Master is unavailable, record
+   that prerequisite rather than counting the test as passed.
+2. **Fresh account/activation:** Account → Logout → Sign Up. Use an unused test
+   username and an approved inbox, keeping gameplay fixtures unchanged. Choose a
+   unique password with uppercase/lowercase letters, a number, and a symbol; the
+   desktop requires at least eight characters and no spaces. Sign in after signup,
+   activate using the staging email link within ten minutes, then use the activation
+   page's homepage link. If the email address is already registered, stop and
+   identify that account instead of creating duplicates.
+3. **Profile/settings:** configure the new account's Steam/Rocksmith profiles,
+   play one full Learn A Song run with Sniffer already open, and record its verified
+   result. Save a Twitch username on Profile, restart, and verify the field, score,
+   and Config selections persist. Search by artist/title and check the chart/path;
+   an unrelated query should give an empty result without an error.
+4. **Username change:** Account → Username → Change. First submit a wrong current
+   password once: it must reject. Then change to an unused username with the correct
+   password. Log out/in with the new name and confirm the same scores/settings.
+   Attempt a second unused name: the 30-day cooldown should reject it. Keep the
+   renamed test account; do not rename a shared fixture.
+5. **Password change:** Account → Password → Change. Test mismatched confirmation,
+   then submit matching new values with the correct current password. Log out;
+   the old password must fail and the new password must work, retaining scores.
+   The original form's heading incorrectly says Change Username; use its password
+   fields. Record this existing copy issue separately from backend failures.
+6. **Password reset:** log out, enter the current username/email on Login, then
+   click Forgot Password. Open the staging link in the received message within
+   ten minutes, choose a new password, and log in. Check the previous password
+   fails and the new one works. Reusing the consumed reset link must be rejected.
+7. **Email change:** only after a second inbox is approved for staging delivery,
+   use Account → Email → Change, enter that address and the current password, and
+   reactivate through the new message. Log in with the new email and confirm scores
+   remain; the old email must no longer authenticate. Do not change to an unapproved
+   inbox: staging mail is intentionally restricted.
+8. **Connection loss:** while idle, disconnect Windows networking and try Search;
+   record any error or stuck UI. Reconnect, search again, and restart if necessary.
+   Separately, on a disposable staging run, disconnect before the song finishes and
+   reconnect after the result. Record the behavior: a local verified indicator does
+   not prove upload, and this client does not automatically retry verified scores.
+   Use a chart with no prior verified score for that account. Stop the app after the
+   result to keep the observation stable; check persistence after reconnecting, then
+   verify a subsequent fully online run saves. Do not treat the offline run as a
+   guaranteed recoverable score.
+9. **Installer isolation:** close staging, open regular Rock Buddy, and confirm its
+   original login/settings remain. Close it before reopening staging. Reinstall the
+   same staging Setup.exe over the existing installation (no uninstall) and confirm
+   staging login/settings/scores survive. This checks reinstall, not an automatic
+   updater or compatibility of the released desktop with the new backend.
+
+Report the step, account name, chart/path/mode, displayed result or exact error,
+and time/timezone. Backend load/security checks, backup restoration, imported-account
+acceptance, and released-client compatibility are separate engineering work. The
+desktop auto-updater is not implemented and cannot yet be acceptance-tested.
 
 ## Building and publishing
 

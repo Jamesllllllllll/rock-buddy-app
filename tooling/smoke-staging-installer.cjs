@@ -4,6 +4,8 @@ const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const { createCipheriv } = require('node:crypto');
+const { deflateSync } = require('node:zlib');
 const { extractFile, listPackage } = require('@electron/asar');
 const { HOSTS } = require('../src/backend-config');
 
@@ -34,6 +36,20 @@ const { HOSTS } = require('../src/backend-config');
     fs.mkdirSync(path.dirname(productionConfig), { recursive: true });
     const sentinel = JSON.stringify({ stagingSmokeSentinel: true });
     fs.writeFileSync(productionConfig, sentinel);
+    // Synthetic Steam/Rocksmith files exercise discovery through the installed preload/main IPC.
+    const steamRoot = path.join(os.tmpdir(), 'rock-buddy-smoke-steam');
+    const remote = path.join(steamRoot, '100', '221680', 'remote');
+    fs.mkdirSync(remote, { recursive: true });
+    fs.mkdirSync(path.join(steamRoot, '100', 'config'), { recursive: true });
+    fs.writeFileSync(path.join(steamRoot, '100', 'config', 'localconfig.vdf'), '"PersonaName" "CI Player"');
+    const compressed = deflateSync(JSON.stringify({ Profiles: [{ PlayerName: 'CI Profile', UniqueID: 'ci-profile' }] }) + '\0');
+    const padded = Buffer.alloc(Math.ceil(compressed.length / 16) * 16);
+    compressed.copy(padded);
+    // Public Rocksmith save-format key, already used by the original desktop reader.
+    const cipher = createCipheriv('aes-256-ecb', Buffer.from('728b369e24ed0134768511021812afc0a3c25d02065f166b4bcc58cd2644f29e', 'hex'), null);
+    cipher.setAutoPadding(false);
+    fs.writeFileSync(path.join(remote, 'LocalProfiles.json'), Buffer.concat([Buffer.alloc(20), cipher.update(padded), cipher.final()]));
+    fs.writeFileSync(path.join(remote, 'ci-profile_PRFLDB'), 'synthetic profile placeholder');
     const child = spawn(path.join(install, 'RockBuddyStaging.exe'), ['--remote-debugging-port=9333'], {
         cwd: os.tmpdir(), stdio: 'ignore',
     });
@@ -59,13 +75,26 @@ const { HOSTS } = require('../src/backend-config');
                 if (data.id === 1) { clearTimeout(timer); resolve(data); }
             });
             socket.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: {
-                expression: '(async () => ({host: await window.api.getHost(), version: await window.api.getVersion(), sentinel: await window.api.storeGet("stagingSmokeSentinel")}))()',
+                expression: `(async () => {
+                    await window.api.storeSet('default_steam_user_data_path', ${JSON.stringify(steamRoot)});
+                    const detected = [];
+                    for (const user_id of [999001, 999002]) {
+                        await window.api.storeSet('auth_data', { user_id });
+                        detected.push(await window.api.resolveRocksmithConfig());
+                    }
+                    await window.api.storeDelete('auth_data');
+                    return {host: await window.api.getHost(), version: await window.api.getVersion(),
+                        sentinel: await window.api.storeGet('stagingSmokeSentinel'), detected};
+                })()`,
                 awaitPromise: true, returnByValue: true,
             } }));
         });
         assert.ok(!response.result?.exceptionDetails, 'Preload and renderer must load');
         assert.equal(response.result.result.value.host, HOSTS.staging);
         assert.equal(response.result.result.value.sentinel, null);
+        for (const config of response.result.result.value.detected) {
+            assert.equal(config?.profilePath, path.join(remote, 'ci-profile_PRFLDB'), 'Fresh accounts discover the profile without Config');
+        }
         const versionCheck = await fetch(HOSTS.staging + '/api/auth/login.php', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ version: response.result.result.value.version }),
@@ -75,7 +104,7 @@ const { HOSTS } = require('../src/backend-config');
         assert.deepEqual(await versionCheck.json(), { error: 'Invalid JSON data.' });
         assert.equal(fs.readFileSync(productionConfig, 'utf8'), sentinel);
         assert.ok(fs.existsSync(path.join(process.env.APPDATA, 'rock-buddy-staging/config-staging.json')));
-        console.log('NSIS install, packaged startup, staging routing, runtime bundling, and production settings isolation passed.');
+        console.log('NSIS install, packaged startup, staging routing, runtime bundling, production settings isolation, and fresh-account profile discovery passed.');
     } finally {
         socket?.close();
         if (child.pid) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
