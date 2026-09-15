@@ -6,13 +6,15 @@
 Packaged builds accept `--backend=staging` or `--backend=local` too.
 
 Staging and local use separate electron-store files and Chromium sessions. They start
-with no production login or settings; sign in with synthetic development accounts
-once authentication is implemented. Never copy production API keys into them.
-Staging serves the unchanged homepage, health checks, three catalog read APIs, and
-two score-write APIs with synthetic tokens. Login and the remaining APIs are still
-unported, so normal desktop sign-in and end-to-end gameplay testing remain pending.
+with no production login or settings. Never copy production API keys into them.
+All backend JSON handlers are implemented. Staging enables catalog, score writes/reads,
+rankings, search, profiles, statistics, and token authentication with synthetic accounts.
+Password and email operations remain gated until hosting and owner configuration are
+complete. Local synthetic sign-in is available with the site's documented fake key
+and password configuration; shared staging sign-in and real gameplay acceptance
+remain pending.
 See the site's [migration plan](https://github.com/Jamesllllllllll/rock-buddy-site/blob/feat/typescript-foundation/docs/migration-plan.md) and
-[synthetic credentials](https://github.com/Jamesllllllllll/rock-buddy-site/blob/feat/typescript-foundation/docs/catalog-api.md#local-and-staging-use)
+[local account testing](https://github.com/Jamesllllllllll/rock-buddy-site/blob/feat/typescript-foundation/docs/development.md#local-account-testing)
 in the site fork.
 
 The legacy positional URL argument still works, with a separate store per origin.
