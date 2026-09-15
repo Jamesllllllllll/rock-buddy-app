@@ -24,6 +24,7 @@ function resolveRocksmithConfig(store, userId, getSteamProfiles, getRocksmithPro
                 const profilePath = path.join(root, steam, '221680', 'remote', profile + '_PRFLDB');
                 if (fs.existsSync(profilePath)) candidates.push({
                     steamUserDataPath: root, steamProfile: steam, rocksmithProfile: profile, profilePath,
+                    profileName: Object.keys(profiles).find(name => profiles[name] === profile) || profile,
                 });
             }
         }

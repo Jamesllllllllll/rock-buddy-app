@@ -11,6 +11,8 @@ const semver = require('semver');
 const { spawn } = require('child_process');
 const { unzipSync } = require('node:zlib');
 const { resolveRocksmithConfig } = require('./rocksmith-config');
+const { approveProfileImport } = require('./profile-import');
+const profileImportDecisions = new Map();
 
 // Process input args
 const { HOSTS, resolveBackend } = require('./backend-config');
@@ -537,11 +539,13 @@ function createWindow() {
 
     // Set persistent data
     ipcMain.handle('store-set', (event, key, value) => {
+        if (key === 'auth_data') profileImportDecisions.clear();
         store.set(key, value);
     });
 
     // Delete persistent data
     ipcMain.handle('store-delete', (event, key) => {
+        if (key === 'auth_data') profileImportDecisions.clear();
         store.delete(key);
     });
 
@@ -669,6 +673,50 @@ function createWindow() {
     // Gets a map of Steam profiles and their corresponding folder names
     ipcMain.handle('resolve-rocksmith-config', () => {
         return resolveRocksmithConfig(store, store.get('auth_data')?.user_id, getSteamProfiles, getRocksmithProfiles);
+    });
+
+    ipcMain.handle('prepare-rocksmith-import', async () => {
+        const auth = store.get('auth_data');
+        if (!auth?.api_key) throw new Error('Please log in before importing Rocksmith history.');
+        const config = resolveRocksmithConfig(store, auth.user_id, getSteamProfiles, getRocksmithProfiles);
+        if (!config) return null;
+        const unchangedLogin = () => {
+            const current = store.get('auth_data');
+            if (current?.user_id !== auth.user_id || current?.api_key !== auth.api_key)
+                throw new Error('Login changed. Please reopen Sniffer.');
+        };
+        const profile = { steam_id: config.steamProfile, profile_id: config.rocksmithProfile, profile_name: config.profileName };
+        const key = JSON.stringify([auth.user_id, profile.steam_id, profile.profile_id]);
+        if (!profileImportDecisions.has(key)) {
+            const allowed = await approveProfileImport(profile, async (action, candidate) => {
+                unchangedLogin();
+                const response = await fetch(host + '/api/account/rocksmith_profile.php', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ version: currentVersion, auth_data: auth, action, profile: candidate }),
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (!response.ok) throw new Error('Could not check your linked Rocksmith profile. Please try again.');
+                const data = await response.json();
+                if (!Object.hasOwn(data, 'profile')) throw new Error('Invalid Rocksmith profile response.');
+                return data;
+            }, async (original, candidate) => {
+                unchangedLogin();
+                const result = await dialog.showMessageBox(win, {
+                    type: 'question', title: 'Rocksmith profile',
+                    message: original ? 'Import history from a different Rocksmith profile?' : 'Link this Rocksmith profile to your Rock Buddy account?',
+                    detail: original
+                        ? `Original: ${original.profile_name} (Steam ${original.steam_id})\nSelected: ${candidate.profile_name} (Steam ${candidate.steam_id})\n\nImport this profile's saved scores and play counts for this login? Your original link will stay unchanged. Skipping still allows new verified gameplay scores.`
+                        : `Selected: ${candidate.profile_name} (Steam ${candidate.steam_id})\n\nConfirm this is your Rocksmith profile. Rock Buddy will remember it across computers and import its saved scores and play counts. Skipping still allows new verified gameplay scores.`,
+                    buttons: ['Skip import', original ? 'Import this session' : 'Link profile'],
+                    defaultId: 0, cancelId: 0, noLink: true,
+                });
+                unchangedLogin();
+                return result.response === 1;
+            });
+            unchangedLogin();
+            profileImportDecisions.set(key, allowed);
+        }
+        return { ...config, importHistory: profileImportDecisions.get(key) };
     });
 
     ipcMain.handle('get-steam-profiles', (event, steamUserDataPath) => {

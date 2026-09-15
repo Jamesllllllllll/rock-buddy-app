@@ -1102,7 +1102,7 @@ export class Sniffer {
 
         // Grab current Rocksmith profile data
         const rocksmithData = await this._rocksmith.getProfileData();
-        if (rocksmithData === null) {
+        if (rocksmithData === null && this._rocksmith.importHistory) {
             throw new Error("Failed to read Rocksmith profile data. Please check your config settings.");
         }
 
@@ -1147,8 +1147,8 @@ export class Sniffer {
                 logMessage("ARRANGEMENT: " + arrangementData['name'] + " - " + arrangementData['note_data_hash']);
             }
 
-            const lasDataExists = rocksmithData['Stats']['Songs'].hasOwnProperty(hash);
-            const saDataExists = rocksmithData['SongsSA'].hasOwnProperty(hash);
+            const lasDataExists = rocksmithData !== null && rocksmithData['Stats']['Songs'].hasOwnProperty(hash);
+            const saDataExists = rocksmithData !== null && rocksmithData['SongsSA'].hasOwnProperty(hash);
             if (lasDataExists) {
                 arrangementData['mastery'] = rocksmithData['Stats']['Songs'][hash]['MasteryPeak'];
                 arrangementData['streak'] = rocksmithData['Stats']['Songs'][hash]['Streak'];
@@ -1205,7 +1205,7 @@ export class Sniffer {
         const sync_response = await post(host + '/api/data/sniffer_sync.php', {
             auth_data: authData,
             song_data: snortData,
-            lurk_mode: this._lurkMode
+            lurk_mode: this._lurkMode || !this._rocksmith.importHistory
         });
 
         if ('error' in sync_response) {

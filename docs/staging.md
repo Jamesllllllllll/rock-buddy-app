@@ -16,11 +16,21 @@ folder. Existing account selections are preserved. Multiple eligible profiles or
 missing saved files require a choice in Config; visiting Config does not choose an
 arbitrary first profile. A nonstandard Steam folder may need Browse once.
 
-Separate Rock Buddy accounts can still read the same local Rocksmith save. Sync
-imports that save's mastery, streak, play counts, and Score Attack records into the
-logged-in account. Imported Learn A Song scores stay **unverified** and cannot
-replace a verified result. Only a verified run under the current account verifies
-its score. Use separate Rocksmith profiles if the players need separate game history.
+On first use, confirm the original Rocksmith profile linked to the account. The
+backend remembers its Steam/profile identity across PCs. The original profile
+imports automatically; a different selected save requires confirmation per login.
+“Import this session” never replaces the original link. “Skip import” blocks saved
+mastery, streaks, play counts, and Score Attack history while allowing new verified
+gameplay and catalog/leaderboard use. Logging out or restarting clears that decision.
+This checks the selected import save; RockSniffer does not report the active in-game
+profile. Importing Learn A Song history stays **unverified** and cannot replace a
+verified result. Separate players should use separate Rocksmith profiles.
+
+Acceptance: confirm the original once, restart/login and check it needs no new
+confirmation. Select another profile in Config: decline and verify no saved history
+imports, then play a verified run. Log out/in, approve the alternate for this login,
+and confirm history imports. Returning to the original must not prompt. Repeat on
+another PC if available; changing computers must retain the server-side original.
 
 1. Log in with `FixtureLead` / `Synthetic Rock Buddy password!`, or create a staging
    account using an approved test inbox. Production accounts are not imported.
