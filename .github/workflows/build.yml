@@ -28,6 +28,23 @@ jobs:
       - name: Publish self-contained RockSniffer for staging
         if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
         run: dotnet publish RockSniffer/RockSniffer/RockSniffer.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:LangVersion=12.0 -o .generated/rocksniffer-staging
+      # The legacy NSIS 3.0.4.1 System.dll intermittently crashes on fresh installs.
+      # Pin the maintained upstream bundle without upgrading the app dependencies.
+      - name: Prepare NSIS 3.12
+        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'rock-buddy-nsis'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          $archive = Join-Path $root 'bundle.tar.gz'
+          Invoke-WebRequest 'https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis%402.0.1/nsis-bundle-3.12.tar.gz' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'fe36a357f3a220db893498e830fd80e0769768a18a99f4e4d2447b982538feed') { throw 'NSIS checksum mismatch' }
+          tar -xzf $archive -C $root
+          if ($LASTEXITCODE -ne 0) { throw 'NSIS extraction failed' }
+          $nsis = Join-Path $root 'nsis-bundle/windows'
+          # electron-builder 26 expects the compiler in Bin rather than the bundle root.
+          Copy-Item "$nsis/makensis.exe" "$nsis/Bin/makensis.exe"
+          "ELECTRON_BUILDER_NSIS_DIR=$nsis" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Package staging installer
         if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
         run: npm run package:staging
