@@ -13,7 +13,14 @@ const { HOSTS } = require('../src/backend-config');
     const installers = fs.readdirSync(out).filter(name => name.endsWith('-Setup.exe'));
     assert.equal(installers.length, 1, 'Exactly one installer expected');
     const install = path.join(os.tmpdir(), 'rock-buddy-staging-smoke');
-    const result = spawnSync(path.join(out, installers[0]), ['/S', `/D=${install}`], { timeout: 120000 });
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+        '$p = Start-Process -FilePath $env:SMOKE_INSTALLER -ArgumentList @("/S", "/D=$env:SMOKE_INSTALL_DIR") -Wait -PassThru; exit $p.ExitCode',
+    ], { timeout: 120000, stdio: 'inherit', env: { ...process.env, SMOKE_INSTALLER: path.join(out, installers[0]), SMOKE_INSTALL_DIR: install } });
+    if (result.status !== 0) {
+        spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+            'Get-WinEvent -FilterHashtable @{LogName="Application"; StartTime=(Get-Date).AddMinutes(-3)} -ErrorAction SilentlyContinue | Where-Object {$_.Message -like "*Rock-Buddy-Staging*"} | Select-Object -First 3 -ExpandProperty Message',
+        ], { stdio: 'inherit', timeout: 15000 });
+    }
     assert.equal(result.status, 0, 'NSIS install must succeed');
     const asar = path.join(install, 'resources/app.asar');
     const metadata = JSON.parse(extractFile(asar, 'package.json'));
