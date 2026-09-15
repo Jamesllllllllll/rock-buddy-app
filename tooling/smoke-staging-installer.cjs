@@ -65,7 +65,7 @@ const { HOSTS } = require('../src/backend-config');
         });
         assert.ok(!response.result?.exceptionDetails, 'Preload and renderer must load');
         assert.equal(response.result.result.value.host, HOSTS.staging);
-        assert.equal(response.result.result.value.sentinel, undefined);
+        assert.equal(response.result.result.value.sentinel, null);
         const versionCheck = await fetch(HOSTS.staging + '/api/auth/login.php', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ version: response.result.result.value.version }),
