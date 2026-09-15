@@ -80,3 +80,12 @@ test('missing saves or an unauthenticated account do not write settings', t => {
     for (const user of [undefined, null, 0, -1, '101']) assert.equal(f.resolve(user), null);
     assert.deepEqual(f.writes, []);
 });
+
+test('discovers another account after numeric settings keys serialize as an array with null gaps', t => {
+    const f = fixture(t);
+    // electron-store's dot-path handling can represent numeric user IDs as array indexes.
+    const users = [];
+    users[101] = { steam_user_data_path: f.root };
+    f.values.user_data = JSON.parse(JSON.stringify(users));
+    assert.equal(f.resolve(102).steamUserDataPath, f.root);
+});

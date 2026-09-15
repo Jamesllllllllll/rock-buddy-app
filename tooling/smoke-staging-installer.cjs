@@ -79,7 +79,7 @@ const { HOSTS } = require('../src/backend-config');
                 expression: `(async () => {
                     await window.api.storeSet('default_steam_user_data_path', ${JSON.stringify(steamRoot)});
                     const detected = [];
-                    for (const user_id of [999001, 999002]) {
+                    for (const user_id of [9001, 9002]) {
                         await window.api.storeSet('auth_data', { user_id });
                         detected.push(await window.api.resolveRocksmithConfig());
                     }

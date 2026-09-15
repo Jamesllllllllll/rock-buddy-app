@@ -10,7 +10,7 @@ function resolveRocksmithConfig(store, userId, getSteamProfiles, getRocksmithPro
     const savedRocksmith = store.get(prefix + 'rocksmith_profile');
     const roots = savedRoot ? [savedRoot] : [
         store.get('default_steam_user_data_path'),
-        ...Object.values(store.get('user_data') || {}).map(user => user.steam_user_data_path),
+        ...Object.values(store.get('user_data') || {}).map(user => user?.steam_user_data_path),
     ];
     const candidates = [];
     for (const root of new Set(roots.filter(value => typeof value === 'string' && value))) {
