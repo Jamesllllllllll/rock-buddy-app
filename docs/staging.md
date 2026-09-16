@@ -4,8 +4,8 @@ Current priority (September 16): complete acceptance and cut over the TypeScript
 backend while keeping the existing public desktop working at `rock-buddy.com`.
 Multiplayer is on hold. New profile-observer integration, automatic updates, and
 desktop polish are separate improvements, not prerequisites for a compatible
-backend launch. The current public installer still needs its own compatibility
-test; passing the modified staging installer alone does not establish that result.
+backend launch. The public 1.11.0 behavior still needs compatibility acceptance using the
+CSP-only test copy below; beta13 acceptance alone does not establish that result.
 
 Download the **Setup.exe** from a staging prerelease in
 [the fork’s releases](https://github.com/Jamesllllllllll/rock-buddy-app/releases).
@@ -220,49 +220,42 @@ with the five backend preparation/cutover steps in the site migration plan.
 
 ## Public desktop compatibility before cutover
 
-Test the owner's unmodified [v1.11.0 installer](https://github.com/tnt-coders/rock-buddy-app/releases/tag/v1.11.0).
-September 16 inspection of the actual release archive confirmed version 1.11.0
-and `process.argv.slice(2)` for its backend override. The installer SHA-256 is
-`d4d44c84b086627e07920648800d553d168d9176bc0400740158b5d932149263`.
-Unlike the staging build, this app shares normal production settings. Use a
-Windows account with no existing production Rock Buddy settings, or a disposable
-Windows account/VM. Close all other Rock Buddy/RockSniffer instances.
+Use the **Public 1.11.0 — staging compatibility** ZIP from
+[the fork's releases](https://github.com/Jamesllllllllll/rock-buddy-app/releases).
+The separate `test/public-1.11.0-staging` branch starts at the owner's `v1.11.0`;
+its only application change adds the staging origin to the startup Content
+Security Policy. It includes none of beta13's behavior changes or experimental
+RockSniffer readers. The local checkout is `../rock-buddy-app-public-staging`.
 
-1. Install the public release. Close it if the installer launches it automatically.
-2. Save [`public-staging.cmd`](../tooling/public-staging.cmd) and
-   [`public-staging.cjs`](../tooling/public-staging.cjs) into the same folder.
-   Run the CMD file. It uses the installed public app's bundled Node runtime;
-   no additional Node installation is needed. If the app is installed somewhere
-   other than `%LOCALAPPDATA%\Programs\rock-buddy`, drag its `rock-buddy.exe` onto
-   the CMD file. Keep the relay window open throughout the test.
-3. Before signing in, open DevTools and run `await window.api.getHost()`.
-   It must return `http://raspberrypi:8080`. The launcher maps that hostname to
-   this PC only inside this process and forwards its API requests to the fixed
-   HTTPS staging URL. If it returns `https://rock-buddy.com`, stop and relaunch
-   through the CMD file. No hosts-file or app-file changes are required.
+Packaging preserves the released executable, RockSniffer, and dependencies.
+It checks the original installer SHA-256 and compares every file in the repacked
+archive: only `src/index.html` may differ. Windows CI must pass startup, backend
+selection, and a staging API request under the revised policy before publishing.
+This is a minimally modified compatibility build, not an unmodified-installer
+acceptance result. Real gameplay and restart acceptance remain pending.
+
+1. Extract the entire ZIP into a new folder. Close all other Rock Buddy/RockSniffer
+   instances. The ZIP does not install over either existing app.
+2. Run **Start-Staging.cmd** inside the extracted folder. Use it for every launch;
+   opening `rock-buddy.exe` directly still selects production.
+3. Before signing in, run `await window.api.getHost()` in DevTools. It must return
+   `https://rock-buddy-site-staging.rock-buddy.workers.dev`. The title stays 1.11.0.
 4. Sign in with the staging account, configure the intended Steam/Rocksmith save,
-   and check Profile, Search, Rank, loaded-song history, and one verified Lead or
-   Rhythm play. Restart using the CMD file and confirm the score persists.
-   The public release has no profile-import confirmation.
-5. Report version, confirmed host, account, song/path, and results. This proves
-   compatibility of the release users already have; beta13 acceptance is separate.
-   Continue using the CMD file for every launch during this test. Closing the
-   app stops the relay. Normal shortcuts still connect to production.
+   and check Profile, Search, Rank, loaded-song history, verified Lead/Rhythm,
+   Score Attack, and score retrieval after restarting through **Start-Staging.cmd**.
+5. Report version, confirmed host, account, song/path, and results.
 
-The previous direct workers.dev launch instructions were incorrect: the public
-release's startup page has a Content Security Policy allowing `rock-buddy.com`
-and `http://raspberrypi:8080`, but not workers.dev. The override can return the
-correct staging URL while authentication still fails with “Failed to fetch.”
-The relay uses the already-allowed origin without changing the released app or
-disabling browser security. It accepts only desktop API requests on loopback
-port 8080 and does not retry writes or log credentials. The first `staging`
-launch argument is a placeholder for the packaged app's `slice(2)` behavior.
+The public app's settings behavior is preserved: this copy shares regular Rock
+Buddy settings, whereas beta13 has separate staging settings. Use a Windows user
+without production Rock Buddy settings, or back up `%APPDATA%\rock-buddy` while
+closed. The public app has no profile-import confirmation and retains its original
+RockSniffer runtime requirements.
 
-September 16 validation: archive inspection, relay tests, and a Chromium probe
-using the exact released startup CSP reproduced the direct-URL failure and
-received the expected staging authentication response through the relay.
-The Windows launch and full public-app acceptance remain pending. This staging
-hostname restriction does not apply to cutover at the existing `rock-buddy.com`.
+The unmodified public startup policy blocks workers.dev even when `getHost()`
+returns that URL, causing “Failed to fetch.” The CSP-only copy replaces the
+previous local-relay test approach. No relay, hosts-file change, or disabled
+browser security is needed. This hostname restriction does not apply at the
+existing `rock-buddy.com` after cutover.
 
 ## Building and publishing
 
