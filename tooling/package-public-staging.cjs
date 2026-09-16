@@ -30,7 +30,7 @@ const asar = require('@electron/asar');
     assert.deepEqual(asar.listPackage(archive).sort(), paths, 'No archive entries added or removed');
     let checked = 0;
     for (const entry of paths) {
-        const name = entry.replace(/^[/\\]/, '');
+        const name = entry.replaceAll('\\', '/').replace(/^\//, '');
         const metadata = asar.statFile(original, name);
         if (metadata.files) continue;
         assert.ok(!metadata.unpacked && !metadata.link, 'Unexpected public archive entry');
