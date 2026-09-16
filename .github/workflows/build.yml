@@ -24,7 +24,7 @@ jobs:
           python-version: '3.12'
       - run: npm ci
       - run: npm test
-      - name: Test RockSniffer profile observer
+      - name: Test RockSniffer profile and multiplayer readers
         run: dotnet test RockSniffer/RockSnifferLib/RockSnifferLib.Tests/RockSnifferLib.Tests.csproj --configuration Release
       - run: npm run build
       - name: Publish self-contained RockSniffer for staging
