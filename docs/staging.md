@@ -229,21 +229,40 @@ Windows account with no existing production Rock Buddy settings, or a disposable
 Windows account/VM. Close all other Rock Buddy/RockSniffer instances.
 
 1. Install the public release. Close it if the installer launches it automatically.
-2. Make a copy of its shortcut and append these arguments after the quoted EXE
-   path in **Properties → Target**: `staging https://rock-buddy-site-staging.rock-buddy.workers.dev`.
-   The first `staging` argument is a placeholder because the packaged app skips
-   its first argument. Supplying only the URL does not select staging.
-3. Launch through that shortcut. Before signing in, open DevTools and run
-   `await window.api.getHost()`. It must return the staging URL. If it returns
-   `https://rock-buddy.com`, stop and correct the launch arguments. Source/archive
-   inspection is complete; the actual Windows launch remains to be tested.
+2. Save [`public-staging.cmd`](../tooling/public-staging.cmd) and
+   [`public-staging.cjs`](../tooling/public-staging.cjs) into the same folder.
+   Run the CMD file. It uses the installed public app's bundled Node runtime;
+   no additional Node installation is needed. If the app is installed somewhere
+   other than `%LOCALAPPDATA%\Programs\rock-buddy`, drag its `rock-buddy.exe` onto
+   the CMD file. Keep the relay window open throughout the test.
+3. Before signing in, open DevTools and run `await window.api.getHost()`.
+   It must return `http://raspberrypi:8080`. The launcher maps that hostname to
+   this PC only inside this process and forwards its API requests to the fixed
+   HTTPS staging URL. If it returns `https://rock-buddy.com`, stop and relaunch
+   through the CMD file. No hosts-file or app-file changes are required.
 4. Sign in with the staging account, configure the intended Steam/Rocksmith save,
    and check Profile, Search, Rank, loaded-song history, and one verified Lead or
-   Rhythm play. Restart using the same shortcut and confirm the score persists.
+   Rhythm play. Restart using the CMD file and confirm the score persists.
    The public release has no profile-import confirmation.
 5. Report version, confirmed host, account, song/path, and results. This proves
    compatibility of the release users already have; beta13 acceptance is separate.
-   Continue using the staging shortcut for every launch during this test.
+   Continue using the CMD file for every launch during this test. Closing the
+   app stops the relay. Normal shortcuts still connect to production.
+
+The previous direct workers.dev launch instructions were incorrect: the public
+release's startup page has a Content Security Policy allowing `rock-buddy.com`
+and `http://raspberrypi:8080`, but not workers.dev. The override can return the
+correct staging URL while authentication still fails with “Failed to fetch.”
+The relay uses the already-allowed origin without changing the released app or
+disabling browser security. It accepts only desktop API requests on loopback
+port 8080 and does not retry writes or log credentials. The first `staging`
+launch argument is a placeholder for the packaged app's `slice(2)` behavior.
+
+September 16 validation: archive inspection, relay tests, and a Chromium probe
+using the exact released startup CSP reproduced the direct-URL failure and
+received the expected staging authentication response through the relay.
+The Windows launch and full public-app acceptance remain pending. This staging
+hostname restriction does not apply to cutover at the existing `rock-buddy.com`.
 
 ## Building and publishing
 
