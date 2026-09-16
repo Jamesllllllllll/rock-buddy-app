@@ -1,5 +1,12 @@
 # Backend migration testing
 
+Current priority (September 16): complete acceptance and cut over the TypeScript
+backend while keeping the existing public desktop working at `rock-buddy.com`.
+Multiplayer is on hold. New profile-observer integration, automatic updates, and
+desktop polish are separate improvements, not prerequisites for a compatible
+backend launch. The current public installer still needs its own compatibility
+test; passing the modified staging installer alone does not establish that result.
+
 Download the **Setup.exe** from a staging prerelease in
 [the fork’s releases](https://github.com/Jamesllllllllll/rock-buddy-app/releases).
 Install it and open **Rock Buddy Staging**. No command-line flags or developer tools
@@ -64,66 +71,179 @@ plan a gameplay/submission pause during backend cutover. The
 [site migration plan](https://github.com/Jamesllllllllll/rock-buddy-site/blob/feat/typescript-foundation/docs/migration-plan.md)
 tracks backend acceptance; Windows gameplay remains a manual gate.
 
-## Remaining Windows walkthrough
+## Windows acceptance
 
-Lead/Rhythm, lower-score preservation, unverified-to-verified replacement, restart
-retrieval, Hard and Master Score Attack, profile totals, and competitive ranking updates have
-passed. James has no bass; real Bass gameplay needs another tester and remains open.
+Confirmed through September 16:
 
-1. **Master Score Attack — passed:** James confirmed completion on September 15.
-2. **Fresh account/activation:** Account → Logout → Sign Up. Use an unused test
-   username and an inbox you control, keeping gameplay fixtures unchanged. Choose a
-   unique password with uppercase/lowercase letters, a number, and a symbol; the
-   desktop requires at least eight characters and no spaces. Sign in after signup,
-   activate using the staging email link within ten minutes, then use the activation
-   page's homepage link. If the email address is already registered, stop and
-   identify that account instead of creating duplicates.
-3. **Profile/settings:** configure the new account's Steam/Rocksmith profiles,
-   play one full Learn A Song run with Sniffer already open, and record its verified
-   result. Save a Twitch username on Profile, restart, and verify the field, score,
-   and Config selections persist. Search by artist/title and check the chart/path;
-   an unrelated query should give an empty result without an error.
-4. **Username change:** Account → Username → Change. First submit a wrong current
-   password once: it must reject. Then change to an unused username with the correct
-   password. Log out/in with the new name and confirm the same scores/settings.
-   After the companion backend change is deployed, reopen Change Username: the form should show the remaining
-   cooldown in days (hours/minutes below one day) and disable Submit until it expires.
-   This requires `username_change_wait_seconds` from `get_account_info.php`; while
-   that field is absent, the app keeps the original warning and server-side rejection.
-   The backend also rejects attempts during the cooldown with the remaining wait. Keep the
-   renamed test account; do not rename a shared fixture.
-5. **Password change:** Account → Password → Change. Test mismatched confirmation,
-   then submit matching new values with the correct current password. Log out;
-   the old password must fail and the new password must work, retaining scores.
-   The original form's heading incorrectly says Change Username; use its password
-   fields. Record this existing copy issue separately from backend failures.
-6. **Password reset:** log out, enter the current username/email on Login, then
-   click Forgot Password. Open the staging link in the received message within
-   ten minutes, choose a new password, and log in. Check the previous password
-   fails and the new one works. Reusing the consumed reset link must be rejected.
-7. **Email change:** use a second inbox you control. In Account → Email → Change,
-   enter that address and the current password, and
-   reactivate through the new message. Log in with the new email and confirm scores
-   remain; the old email must no longer authenticate. Staging has no recipient allowlist.
-8. **Connection loss:** while idle, disconnect Windows networking and try Search;
-   record any error or stuck UI. Reconnect, search again, and restart if necessary.
-   Separately, on a disposable staging run, disconnect before the song finishes and
-   reconnect after the result. Record the behavior: a local verified indicator does
-   not prove upload, and this client does not automatically retry verified scores.
-   Use a chart with no prior verified score for that account. Stop the app after the
-   result to keep the observation stable; check persistence after reconnecting, then
-   verify a subsequent fully online run saves. Do not treat the offline run as a
-   guaranteed recoverable score.
-9. **Installer isolation:** close staging, open regular Rock Buddy, and confirm its
-   original login/settings remain. Close it before reopening staging. Reinstall the
-   same staging Setup.exe over the existing installation (no uninstall) and confirm
-   staging login/settings/scores survive. This checks reinstall, not an automatic
-   updater or compatibility of the released desktop with the new backend.
+- Lead/Rhythm verified gameplay, lower-score preservation, unverified-to-verified
+  replacement, restart retrieval, Hard/Master Score Attack, profile totals and rankings.
+- James confirms signup/activation, username change, password change, email change,
+  password reset, and profile/settings/search all work. These are user-reported
+  workflow passes; a build/account and individual negative-case results were not
+  recorded in that confirmation.
 
-Report the step, account name, chart/path/mode, displayed result or exact error,
-and time/timezone. Backend load/security checks, backup restoration, imported-account
-acceptance, and released-client compatibility are separate engineering work. The
-desktop auto-updater is not implemented and cannot yet be acceptance-tested.
+James has no bass; real Bass gameplay still needs another tester. The new username
+countdown's companion backend was deployed September 16 (site a662906); it still
+requires a new app build. Successful
+username-change testing does not establish acceptance of that pending enhancement.
+
+Reinstallation and a subsequent verified upload passed on the Windows test PC.
+Bury Me's Unknown history fields reflect absent save data, as confirmed below. Use the published
+[staging build 13](https://github.com/Jamesllllllllll/rock-buddy-app/releases/tag/staging-35028296732-1)
+installer, not a source-development launch. If that PC has no staging installation,
+install it, sign in, configure the correct save, and establish the baseline first.
+Close regular Rock Buddy and any other staging instance using the same test account.
+Keep test-account changes separate from production accounts.
+
+### 1. Connection loss while idle
+
+September 16 observation from James on `1.11.0-beta13`: Account shows
+`TypeError: Failed to fetch`, then `Failed to get account info`, with blank account
+fields. Profile remains at Loading with blank Twitch input; Rank has empty podiums;
+Search gives no visible result/error. Config remains usable. Selecting a song in
+Sniffer produces repeated failed `sniffer_sync.php` requests, hides the song behind
+Failed to fetch, and leaves Snorting data displayed. Offline error handling fails
+acceptance. James subsequently confirmed all pages recovered after reconnection
+without restarting the app. Recovery passes; offline feedback/retry handling does
+not. Online submission recovery and reinstall persistence are confirmed below;
+the post-reinstall verified upload also passed.
+
+Source comparison with public v1.11.0 confirms the same defects: the TypeScript
+POST helper lets fetch rejection escape, leaving page loads unfinished. Account's
+separate JavaScript helper reports one error and its caller adds another. Sniffer
+resets its sync state only after the awaited request returns, so a rejection can
+retry on its 100 ms refresh loop. These are existing desktop issues, not established
+backend regressions. Track a shared connection-error state, bounded retries, and
+preserved local gameplay display as a separate desktop fix. Do not claim server
+data was erased because its offline fields are blank. Revisit the migration impact
+if later testing produces wrong/duplicate writes or another recovery failure.
+
+1. While online, confirm Search works and note the account/build.
+2. Turn off Wi-Fi and unplug Ethernet as applicable, keeping Rock Buddy open.
+   Search for a different song and note the exact error or behavior. An already
+   displayed/cached leaderboard is not proof of connectivity.
+3. Restore connectivity and repeat Search. Check Sniffer reconnects with the same
+   account and settings. Record whether recovery was automatic, needed a refresh,
+   or required an app restart. A crash, indefinite spinner, or unexpected logout
+   needs investigation.
+
+### 2. Connection loss during score submission
+
+September 16, approximately 12:38 EDT (16:38 UTC), beta13: James disconnected
+during Road Train by King Gizzard & The Lizard Wizard. The local live feed continued
+through completion, with no connection warning; the stats area showed `*snort*`
+and an unverified badge. He closed Rock Buddy offline, then reconnected while
+leaving it closed. Read-only staging inspection before reopening found song 379
+with no Learn A Song scores on any of its four arrangements. User 10478
+(`jimmy_pants`) has four stats rows with null play counts and last-played values.
+James confirmed Rock Buddy account `jimmy_pants`, Rhythm (arrangement 1996),
+Rocksmith profile "james"; "crystal cat" is his Steam account. There is no persisted
+LAS result for this test at this checkpoint.
+
+After reopening and selecting the arrangement, James reported no visible score.
+A subsequent read-only D1 check confirmed Rhythm now has an unverified score:
+mastery 84.7185%, streak 103, play count 1, raw last-played value
+`2026-09-16 12:41:04` (the stored value has no timezone). This is consistent with
+saved-history import after reconnecting, not recovery of a verified upload. The
+score display is also confirmed: James had been viewing Lead and saw the
+unverified score after switching to Rhythm. James then completed a fully online
+replay and saw a verified result. Read-only D1 inspection confirmed mastery
+88.2931%, streak 89, verified 1, play count 2. Normal online uploads recovered;
+James subsequently confirmed the result remained visible after reinstallation.
+Do not infer why the original local badge was unverified.
+
+1. Choose a disposable Lead/Rhythm Learn A Song test, with no existing verified
+   score for this account/arrangement. Record its current leaderboard state.
+2. Start online with Sniffer running and Lurk Mode off. Disconnect Windows networking
+   midway through the song, well before it finishes; finish without pausing or
+   changing speed. Leave networking off through results and note the app's message.
+3. Close Rock Buddy while still offline, then reconnect. Before reopening it, inspect
+   staging D1 (or ask James's assistant to check) for the exact account/song/path.
+   This preserves evidence before another local-history sync can change the row.
+4. Reopen, check the leaderboard, and play a fully online run. Confirm that run
+   uploads and remains after restarting.
+
+There is no durable verified-score retry queue. The offline run may be absent or
+later appear as an unverified save import; do not report it as a recovered verified
+upload without server evidence. A local verified badge describes the performance,
+not upload success. Log this limitation for the cutover write-pause instructions.
+An online baseline followed by a successful online run demonstrates recovery, not
+protection against losing the offline verified result.
+
+### 3. Reinstall and isolation
+
+September 16, beta13: James confirmed the reinstall checks look good, including
+retained login/configuration and the existing verified score. The subsequent
+Bury Me by Smashing Pumpkins, Rhythm play uploaded successfully: D1 confirms user
+10478, song 394, arrangement 2045, mastery 56.4835%, streak 47, verified 1.
+Play count and last played show Unknown because the saved entry lacks both
+`PlayedCount` and `DateLAS`. James supplied the full entry from a fresh read of
+profile James after exiting Rocksmith normally: the exact Rhythm ID matches and
+AccuracyGlobal is 0.564835 with streak 47, but neither history field exists. Road
+Train in the same save has PlayedCount 2 and DateLAS. The desktop omits the absent
+fields, and staging accepts the sync (lurk_mode false, HTTP 200, success true),
+preserving nulls as the PHP implementation does. This is a source-data limitation,
+not evidence of a failed backend write. Why Rocksmith omitted those fields remains
+unknown; no migration fix is indicated by this case. Do not invent a play count
+or timestamp from verified submissions. Reinstall and subsequent upload passed.
+Upstream [issue #5](https://github.com/tnt-coders/rock-buddy-app/issues/5) reports
+the same absent fields for other charts; it was closed May 11, 2023, citing the
+verified-score merge 03b5bce. Missing history is a known historical scenario.
+
+Chart repair is deferred at James's request; it is not a backend migration gate.
+Bury Me's saved MasteryLast/MasteryPeak are both 1 despite
+AccuracyGlobal 0.564835. This suggests chart compatibility issues, but does not
+prove the cause. The [official CFSM guide](https://customsforge.com/topic/51771-customsforge-song-manager-official-guide-2019/)
+documents incorrect play counts without Dynamic Difficulty and repairs for DD and
+the 100% mastery bug. The cause remains unconfirmed for this chart. No repair or
+independent Rock Buddy play tracking is planned as part of this migration.
+Whether production Rock Buddy is installed and
+its settings isolation was checked has not been explicitly confirmed.
+
+1. On this same Windows PC, record the staging username, Steam/Rocksmith selections,
+   a harmless preference (such as preferred path), and one persisted score.
+2. Fully close staging and run the exact same Setup.exe over the existing install.
+   Do not uninstall or delete its settings. This tests an in-place reinstall, not
+   migration of settings from another PC or an automatic updater.
+3. Open staging. Confirm the login, configuration and preference remain, and the
+   score is retrievable from the server. Complete one online score submission.
+4. If regular Rock Buddy is already installed on this PC, close staging and open
+   regular Rock Buddy: its login/configuration must be unchanged. Close it and
+   reopen staging to confirm separation. If it is not installed, mark this isolation
+   check not tested; do not count it as a pass.
+
+Report each result, account/build, song/arrangement, exact error, and local time with
+its timezone. Never share passwords or API keys. Backend load/security checks,
+backup restoration, imported-account acceptance, and actual public-installer
+compatibility are separate engineering gates. After these Windows checks, continue
+with the five backend preparation/cutover steps in the site migration plan.
+
+## Public desktop compatibility before cutover
+
+Test the owner's unmodified [v1.11.0 installer](https://github.com/tnt-coders/rock-buddy-app/releases/tag/v1.11.0).
+September 16 inspection of the actual release archive confirmed version 1.11.0
+and `process.argv.slice(2)` for its backend override. The installer SHA-256 is
+`d4d44c84b086627e07920648800d553d168d9176bc0400740158b5d932149263`.
+Unlike the staging build, this app shares normal production settings. Use a
+Windows account with no existing production Rock Buddy settings, or a disposable
+Windows account/VM. Close all other Rock Buddy/RockSniffer instances.
+
+1. Install the public release. Close it if the installer launches it automatically.
+2. Make a copy of its shortcut and append these arguments after the quoted EXE
+   path in **Properties → Target**: `staging https://rock-buddy-site-staging.rock-buddy.workers.dev`.
+   The first `staging` argument is a placeholder because the packaged app skips
+   its first argument. Supplying only the URL does not select staging.
+3. Launch through that shortcut. Before signing in, open DevTools and run
+   `await window.api.getHost()`. It must return the staging URL. If it returns
+   `https://rock-buddy.com`, stop and correct the launch arguments. Source/archive
+   inspection is complete; the actual Windows launch remains to be tested.
+4. Sign in with the staging account, configure the intended Steam/Rocksmith save,
+   and check Profile, Search, Rank, loaded-song history, and one verified Lead or
+   Rhythm play. Restart using the same shortcut and confirm the score persists.
+   The public release has no profile-import confirmation.
+5. Report version, confirmed host, account, song/path, and results. This proves
+   compatibility of the release users already have; beta13 acceptance is separate.
+   Continue using the staging shortcut for every launch during this test.
 
 ## Building and publishing
 
@@ -176,8 +296,9 @@ updater-capable installer there as a newer owner-approved stable release; users
 install that one manually. Later updates can use the new flow. Test both PHP and
 Workers compatibility before distributing it ahead of backend cutover.
 
-For a seamless transition, prefer releasing that compatible production update ahead
-of the migration and allow adoption time. The current beta13 installer is staging-only;
+For the backend-first migration, keep existing public installs working and defer
+the optional updater release. If an advance update is later chosen, test it against
+both backends and allow adoption time. The current beta13 installer is staging-only;
 its Sniffer startup also requires `/api/account/rocksmith_profile.php`, which the PHP
 backend does not provide. It cannot be promoted unchanged into an early production
 release. Resolve that dependency or defer the new-backend-only feature until after

@@ -15,6 +15,15 @@ reader PRs, explicit player/account assignment, and the gates before recording s
 
 ## Reliability candidates
 
+Additional finding from our September 16 staging test (no upstream issue filed):
+offline requests leave Search/Rank/Profile blank or loading, Account shows duplicate
+errors, and Sniffer can retry sync on its 100 ms loop while losing its local song
+display. The same request/retry code exists in public v1.11.0. Plan shared error
+handling, bounded retry, protection against saving unloaded profile fields, and
+separation of local gameplay from backend availability. James confirmed all pages
+recover after reconnection without restarting `1.11.0-beta13`; see
+[the test record](staging.md#1-connection-loss-while-idle).
+
 | Issues | Work to investigate | Current assessment / next step |
 | --- | --- | --- |
 | [#87](https://github.com/tnt-coders/rock-buddy-app/issues/87) | Failed Rocksmith profile reads, especially nonstandard Steam folders | Automatic profile discovery helps, but does not establish that this report is fixed. Reproduce its path/configuration failure and improve recovery instructions. |
@@ -57,6 +66,7 @@ These are historical fixes to protect, not newly confirmed bugs.
 
 | Scenarios | Issues |
 | --- | --- |
+| Missing PlayedCount/DateLAS in chart save entries; score uploads must still work and absent history stays Unknown. Same missing fields confirmed for Bury Me Rhythm on September 16; #5 names Mikasa and Laser Cannon Deth Sentence and was closed May 11, 2023 citing the verified-score merge 03b5bce. Chart repair is deferred at James's request; see [staging evidence](staging.md#3-reinstall-and-isolation). This does not gate backend migration. | [#5](https://github.com/tnt-coders/rock-buddy-app/issues/5) |
 | Restarting a song, pausing near its end, and verification on slower PCs | [#79](https://github.com/tnt-coders/rock-buddy-app/issues/79), [#59](https://github.com/tnt-coders/rock-buddy-app/issues/59), [#66](https://github.com/tnt-coders/rock-buddy-app/issues/66) |
 | Tied ranks, streak tie-breakers, and Score Attack strikes taking precedence over score | [#52](https://github.com/tnt-coders/rock-buddy-app/issues/52), [#64](https://github.com/tnt-coders/rock-buddy-app/issues/64), [#49](https://github.com/tnt-coders/rock-buddy-app/issues/49) |
 | Switching Steam profiles and selecting multiple arrangements of the same path | [#4](https://github.com/tnt-coders/rock-buddy-app/issues/4), [#28](https://github.com/tnt-coders/rock-buddy-app/issues/28) |

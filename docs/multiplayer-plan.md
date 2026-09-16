@@ -1,6 +1,7 @@
 # Multiplayer support plan
 
-Status: proposed, September 16, 2026. Planning only; no multiplayer UI, account
+Status: on hold as of September 16, 2026 while backend migration takes priority.
+Planning only; no multiplayer UI, account
 assignment, or score submission is implemented. The combined library is pinned
 at `067414025c24861fafe332a8696ecfc12740a2eb` (upstream PRs
 [#1](https://github.com/tnt-coders/RockSnifferLib/pull/1) and
