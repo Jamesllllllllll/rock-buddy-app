@@ -24,6 +24,8 @@ jobs:
           python-version: '3.12'
       - run: npm ci
       - run: npm test
+      - name: Test RockSniffer profile observer
+        run: dotnet test RockSniffer/RockSnifferLib/RockSnifferLib.Tests/RockSnifferLib.Tests.csproj --configuration Release
       - run: npm run build
       - name: Publish self-contained RockSniffer for staging
         if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
