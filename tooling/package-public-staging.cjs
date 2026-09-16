@@ -30,11 +30,12 @@ const asar = require('@electron/asar');
     assert.deepEqual(asar.listPackage(archive).sort(), paths, 'No archive entries added or removed');
     let checked = 0;
     for (const entry of paths) {
-        const name = entry.replaceAll('\\', '/').replace(/^\//, '');
+        // asar requires native separators for nested lookups on Windows.
+        const name = entry.replace(/^[/\\]/, '');
         const metadata = asar.statFile(original, name);
         if (metadata.files) continue;
         assert.ok(!metadata.unpacked && !metadata.link, 'Unexpected public archive entry');
-        const expected = name === 'src/index.html' ? replacement : asar.extractFile(original, name);
+        const expected = name === path.join('src', 'index.html') ? replacement : asar.extractFile(original, name);
         assert.ok(asar.extractFile(archive, name).equals(expected), `Unexpected change: ${name}`);
         checked++;
     }
