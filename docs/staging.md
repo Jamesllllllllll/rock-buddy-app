@@ -26,6 +26,23 @@ This checks the selected import save; RockSniffer does not report the active in-
 profile. Importing Learn A Song history stays **unverified** and cannot replace a
 verified result. Separate players should use separate Rocksmith profiles.
 
+Pending the next installer: RockSniffer pins the combined library from upstream
+[multiplayer PR #1](https://github.com/tnt-coders/RockSnifferLib/pull/1) and
+[profile-observation PR #2](https://github.com/tnt-coders/RockSnifferLib/pull/2),
+through our RockSniffer and RockSnifferLib forks' `buddy/experimental-readers`
+branches. The app's `prep/experimental-readers` branch carries this dependency
+update for Windows CI without publishing an installer. CI runs both sets of library
+tests. Both features remain disabled by default and the app does not yet supply a
+profile catalog or consume the new snapshots; account matching and upload behavior
+are unchanged. Profile integration
+must observe selection before game login and handle unknown identity (including
+late attachment), duplicate names, and interrupted observations. This experimental
+inference is not a persistent active-profile pointer. See the library's
+[integration notes](../RockSniffer/RockSnifferLib/RSHelpers/Profiles/README.md).
+Multiplayer snapshots provide separate player counters/results, not player account
+ownership; do not route them through existing single-player submissions. See the
+[multiplayer notes](../RockSniffer/RockSnifferLib/RSHelpers/Multiplayer/README.md).
+
 Acceptance: confirm the original once, restart/login and check it needs no new
 confirmation. Select another profile in Config: decline and verify no saved history
 imports, then play a verified run. Log out/in, approve the alternate for this login,
@@ -33,7 +50,7 @@ and confirm history imports. Returning to the original must not prompt. Repeat o
 another PC if available; changing computers must retain the server-side original.
 
 1. Log in with `FixtureLead` / `Synthetic Rock Buddy password!`, or create a staging
-   account using an approved test inbox. Production accounts are not imported.
+   account using an inbox you control. Production accounts are not imported.
 2. In Config, select Steam data/profile and Rocksmith profile; turn Lurk Mode off.
 3. Open Sniffer before a song. Confirm detection, finish a normal verified run,
    and compare mastery/streak with the leaderboard. Avoid charts versioned `test`.
@@ -50,16 +67,12 @@ tracks backend acceptance; Windows gameplay remains a manual gate.
 ## Remaining Windows walkthrough
 
 Lead/Rhythm, lower-score preservation, unverified-to-verified replacement, restart
-retrieval, Hard Score Attack, profile totals, and competitive ranking updates have
+retrieval, Hard and Master Score Attack, profile totals, and competitive ranking updates have
 passed. James has no bass; real Bass gameplay needs another tester and remains open.
 
-1. **Master Score Attack:** use a Lead/Rhythm chart with Master available. Finish
-   the run, then select Game Mode → Score Attack, the played Path, and Difficulty →
-   Master in Sniffer/Search. Compare the numeric score, restart, and retrieve it
-   again. Hard must retain its separate result. If Master is unavailable, record
-   that prerequisite rather than counting the test as passed.
+1. **Master Score Attack — passed:** James confirmed completion on September 15.
 2. **Fresh account/activation:** Account → Logout → Sign Up. Use an unused test
-   username and an approved inbox, keeping gameplay fixtures unchanged. Choose a
+   username and an inbox you control, keeping gameplay fixtures unchanged. Choose a
    unique password with uppercase/lowercase letters, a number, and a symbol; the
    desktop requires at least eight characters and no spaces. Sign in after signup,
    activate using the staging email link within ten minutes, then use the activation
@@ -73,7 +86,11 @@ passed. James has no bass; real Bass gameplay needs another tester and remains o
 4. **Username change:** Account → Username → Change. First submit a wrong current
    password once: it must reject. Then change to an unused username with the correct
    password. Log out/in with the new name and confirm the same scores/settings.
-   Attempt a second unused name: the 30-day cooldown should reject it. Keep the
+   After the companion backend change is deployed, reopen Change Username: the form should show the remaining
+   cooldown in days (hours/minutes below one day) and disable Submit until it expires.
+   This requires `username_change_wait_seconds` from `get_account_info.php`; while
+   that field is absent, the app keeps the original warning and server-side rejection.
+   The backend also rejects attempts during the cooldown with the remaining wait. Keep the
    renamed test account; do not rename a shared fixture.
 5. **Password change:** Account → Password → Change. Test mismatched confirmation,
    then submit matching new values with the correct current password. Log out;
@@ -84,11 +101,10 @@ passed. James has no bass; real Bass gameplay needs another tester and remains o
    click Forgot Password. Open the staging link in the received message within
    ten minutes, choose a new password, and log in. Check the previous password
    fails and the new one works. Reusing the consumed reset link must be rejected.
-7. **Email change:** only after a second inbox is approved for staging delivery,
-   use Account → Email → Change, enter that address and the current password, and
+7. **Email change:** use a second inbox you control. In Account → Email → Change,
+   enter that address and the current password, and
    reactivate through the new message. Log in with the new email and confirm scores
-   remain; the old email must no longer authenticate. Do not change to an unapproved
-   inbox: staging mail is intentionally restricted.
+   remain; the old email must no longer authenticate. Staging has no recipient allowlist.
 8. **Connection loss:** while idle, disconnect Windows networking and try Search;
    record any error or stuck UI. Reconnect, search again, and restart if necessary.
    Separately, on a disposable staging run, disconnect before the song finishes and
@@ -159,6 +175,14 @@ Existing installations discover only the owner's release repository. Ship the fi
 updater-capable installer there as a newer owner-approved stable release; users
 install that one manually. Later updates can use the new flow. Test both PHP and
 Workers compatibility before distributing it ahead of backend cutover.
+
+For a seamless transition, prefer releasing that compatible production update ahead
+of the migration and allow adoption time. The current beta13 installer is staging-only;
+its Sniffer startup also requires `/api/account/rocksmith_profile.php`, which the PHP
+backend does not provide. It cannot be promoted unchanged into an early production
+release. Resolve that dependency or defer the new-backend-only feature until after
+cutover. Existing installed versions should remain supported at `rock-buddy.com`
+while users adopt the update; prove this with the actual public installer.
 
 The production hostname and minimum API version (`1.10.3`) remain unchanged. Prove
 current-client compatibility before requiring a desktop update; the updater need

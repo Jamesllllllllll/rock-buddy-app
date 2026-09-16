@@ -78,3 +78,8 @@ Download **Rock Buddy Staging** from [this fork’s prereleases](https://github.
 for Cloudflare backend testing. It installs separately and selects staging automatically.
 See [testing and build instructions](docs/staging.md). Production downloads stay on the
 owner's repository; automatic download/install/restart remains planned.
+
+See the [upstream issue backlog](docs/upstream-backlog.md) for reviewed feature ideas,
+bug investigations, and regression scenarios to revisit after migration work.
+The [multiplayer plan](docs/multiplayer-plan.md) covers player/account assignment,
+temporary guest authentication, verification, and staged rollout.
