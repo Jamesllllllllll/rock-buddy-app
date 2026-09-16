@@ -221,7 +221,7 @@ with the five backend preparation/cutover steps in the site migration plan.
 ## Public desktop compatibility before cutover
 
 Use the **Public 1.11.0 — staging compatibility** ZIP from
-[the fork's releases](https://github.com/Jamesllllllllll/rock-buddy-app/releases).
+[the tested release](https://github.com/Jamesllllllllll/rock-buddy-app/releases/tag/public-staging-35131499202-1).
 The separate `test/public-1.11.0-staging` branch starts at the owner's `v1.11.0`;
 its only application change adds the staging origin to the startup Content
 Security Policy. It includes none of beta13's behavior changes or experimental
@@ -233,6 +233,8 @@ archive: only `src/index.html` may differ. Windows CI must pass startup, backend
 selection, and a staging API request under the revised policy before publishing.
 This is a minimally modified compatibility build, not an unmodified-installer
 acceptance result. Real gameplay and restart acceptance remain pending.
+Windows packaging and the startup/CSP/API smoke check passed on September 16
+([CI run](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/35131499202)).
 
 1. Extract the entire ZIP into a new folder. Close all other Rock Buddy/RockSniffer
    instances. The ZIP does not install over either existing app.
