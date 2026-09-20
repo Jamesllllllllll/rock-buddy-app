@@ -6,11 +6,18 @@ multiplayer UI or score submission. Read `docs/staging.md` for acceptance status
 
 ## System requirements
 
+- Assume **nothing is installed**, including Git, Node, npm, Python, .NET, or a
+  package manager. Identify the OS, architecture, and shell, check each tool, and
+  install missing prerequisites before running clone/build commands. Do not
+  assume `winget`, Homebrew, or GitHub CLI is available.
 - Use **native Windows x64** for the desktop/RockSniffer build and gameplay.
   Backend-only development can run separately on Linux/macOS; do not promise
   gameplay detection from a Linux/macOS or WSL Electron process.
-- Install Git, **Node.js 24** with npm, **Python 3**, and the **.NET SDK 8**
-  (the runtime alone cannot build RockSniffer).
+- Install [Git](https://git-scm.com/downloads), [Node.js **24** with npm](https://nodejs.org/en/download),
+  [Python 3](https://www.python.org/downloads/), and the [.NET SDK **8**](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+  using official installers or an available OS package manager. Select the x64
+  SDK for native Windows gameplay; the .NET runtime alone cannot build RockSniffer.
+  Reopen the terminal after installation if needed for PATH changes.
 - Verify `git --version`, `node --version`, `npm --version`, `python --version`,
   and `dotnet --list-sdks`. `pre_build.py` is invoked with `python`; ensure that
   name resolves to Python 3. The backend's checks additionally use `python3`.
@@ -29,8 +36,10 @@ npm ci
 npm test
 ```
 
-Use existing GitHub authentication if access is required. Keep submodules at the
-recorded commits; do not use `git submodule update --remote`. The published
+If GitHub requires authentication, check for an existing login; otherwise guide
+the user through interactive GitHub authentication without requesting credentials
+in chat. Internet access is required for cloning and npm/NuGet downloads. Keep
+submodules at the recorded commits; do not use `git submodule update --remote`. The published
 `prep/experimental-readers` branch includes work beyond `feat/staging-backend`.
 
 ## Run with a local backend
@@ -39,6 +48,9 @@ recorded commits; do not use `git submodule update --remote`. The published
    `feat/typescript-foundation`, into a sibling directory. Follow its `AGENTS.md`
    and `docs/development.md`: install dependencies, migrate/seed local D1, enable
    local auth/search/rankings, and initialize the ranking baseline.
+   The backend's `npm ci` installs its pinned Wrangler CLI and local runtime.
+   No global Wrangler installation, Cloudflare login, API token, or paid account
+   is required for local development.
 2. Start the backend with `npm run dev` in that repository. Check the homepage
    and `/healthz` at `http://127.0.0.1:8787`. Keep the backend process running.
 3. In this desktop repository, run `npm run start:local`. This builds RockSniffer,
