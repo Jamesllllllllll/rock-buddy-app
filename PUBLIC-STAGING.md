@@ -1,7 +1,7 @@
 # Public 1.11.0 staging compatibility test
 
 This branch starts at the owner's `v1.11.0` release. The only application change is
-allowing `https://rock-buddy-site-staging.rock-buddy.workers.dev` in the startup
+allowing `https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev` in the startup
 page's Content Security Policy. Gameplay, account behavior, RockSniffer, version,
 and dependencies remain those of the public release. Multiplayer and the newer
 staging app's changes are not included.
@@ -18,7 +18,7 @@ the revised policy. Gameplay and real-account acceptance remain manual checks.
 3. Run **Start-Staging.cmd** inside the extracted folder. Use this launcher every
    time; opening `rock-buddy.exe` directly still selects production.
 4. In DevTools, `await window.api.getHost()` must return
-   `https://rock-buddy-site-staging.rock-buddy.workers.dev`. The title remains 1.11.0.
+   `https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev`. The title remains 1.11.0.
 5. Sign in with a staging account. Check Profile, Search, Rank, loaded-song history,
    one verified Lead/Rhythm play, Score Attack, and restart retrieval.
 

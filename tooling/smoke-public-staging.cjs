@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { extractFile } = require('@electron/asar');
-const STAGING = 'https://rock-buddy-site-staging.rock-buddy.workers.dev';
+const STAGING = 'https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev';
 
 (async () => {
     assert.equal(process.platform, 'win32');

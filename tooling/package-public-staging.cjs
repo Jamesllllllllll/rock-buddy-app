@@ -14,7 +14,7 @@ const asar = require('@electron/asar');
     const before = asar.extractFile(archive, 'src/index.html');
     const allowed = before.toString().replace(
         'http://raspberrypi:8080;script-src',
-        'http://raspberrypi:8080 https://rock-buddy-site-staging.rock-buddy.workers.dev;script-src');
+        'http://raspberrypi:8080 https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev;script-src');
     assert.notEqual(allowed, before.toString(), 'Expected public release CSP');
     const normalize = text => text.replace(/\r\n/g, '\n').trimEnd();
     assert.equal(normalize(source), normalize(allowed), 'Only the staging CSP origin may change');
