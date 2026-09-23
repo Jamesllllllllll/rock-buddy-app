@@ -3,15 +3,15 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { extractFile } = require('@electron/asar');
-const STAGING = 'https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev';
+const REHEARSAL = 'https://rock-buddy-site-rehearsal.tntmusicstudios-c64.workers.dev';
 
 (async () => {
     assert.equal(process.platform, 'win32');
-    const root = path.resolve('release/public-staging');
+    const root = path.resolve('release/public-rehearsal');
     const html = extractFile(path.join(root, 'resources/app.asar'), 'src/index.html').toString();
     const csp = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)[1];
     const child = spawn(path.join(root, 'rock-buddy.exe'),
-        ['staging', STAGING, '--remote-debugging-port=9333'], { cwd: root, stdio: 'ignore' });
+        ['rehearsal', REHEARSAL, '--remote-debugging-port=9333'], { cwd: root, stdio: 'ignore' });
     let socket;
     try {
         let target;
@@ -58,11 +58,11 @@ const STAGING = 'https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev
         assert.ok(!response.error && !response.result?.exceptionDetails,
             'Renderer request failed: ' + JSON.stringify(response.error || response.result?.exceptionDetails));
         const result = response.result.result.value;
-        assert.equal(result.host, STAGING);
+        assert.equal(result.host, REHEARSAL);
         assert.equal(result.version, '1.11.0');
-        assert.equal(result.status, 401);
-        assert.deepEqual(result.body, { error: 'Invalid API key.' });
-        console.log('Public Windows startup, version, staging selection and CSP-protected API request passed.');
+        assert.equal(result.status, 503);
+        assert.deepEqual(result.body, { error: 'Rock Buddy is undergoing maintenance. Please try again later.' });
+        console.log('Public Windows startup, version, rehearsal selection and CSP-protected maintenance response passed; login/gameplay await the import.');
     } finally {
         socket?.close();
         if (child.pid) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });

@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const asar = require('@electron/asar');
 
 (async () => {
-    const root = path.resolve('release/public-staging');
+    const root = path.resolve('release/public-rehearsal');
     const archive = path.join(root, 'resources/app.asar');
     const original = path.resolve('release/original.asar');
     const unpacked = path.resolve('release/unpacked');
@@ -14,10 +14,10 @@ const asar = require('@electron/asar');
     const before = asar.extractFile(archive, 'src/index.html');
     const allowed = before.toString().replace(
         'http://raspberrypi:8080;script-src',
-        'http://raspberrypi:8080 https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev;script-src');
+        'http://raspberrypi:8080 https://rock-buddy-site-rehearsal.tntmusicstudios-c64.workers.dev;script-src');
     assert.notEqual(allowed, before.toString(), 'Expected public release CSP');
     const normalize = text => text.replace(/\r\n/g, '\n').trimEnd();
-    assert.equal(normalize(source), normalize(allowed), 'Only the staging CSP origin may change');
+    assert.equal(normalize(source), normalize(allowed), 'Only the rehearsal CSP origin may change');
     const replacement = Buffer.from(allowed); // Preserve the release's exact line endings.
     assert.equal(JSON.parse(asar.extractFile(archive, 'package.json')).version, '1.11.0');
     await fs.copyFile(archive, original);
@@ -39,8 +39,8 @@ const asar = require('@electron/asar');
         assert.ok(asar.extractFile(archive, name).equals(expected), `Unexpected change: ${name}`);
         checked++;
     }
-    await fs.copyFile('tooling/Start-Staging.cmd', path.join(root, 'Start-Staging.cmd'));
-    await fs.copyFile('PUBLIC-STAGING.md', path.join(root, 'READ-ME.md'));
+    await fs.copyFile('tooling/Start-Rehearsal.cmd', path.join(root, 'Start-Rehearsal.cmd'));
+    await fs.copyFile('PUBLIC-REHEARSAL.md', path.join(root, 'READ-ME.md'));
     const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
     await fs.writeFile(path.join(root, 'provenance.json'), JSON.stringify({
         release: 'https://github.com/tnt-coders/rock-buddy-app/releases/tag/v1.11.0',

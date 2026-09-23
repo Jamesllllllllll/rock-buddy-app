@@ -1,14 +1,14 @@
-name: Public desktop staging compatibility
+name: Public desktop rehearsal compatibility
 on:
   push:
-    branches: [test/public-1.11.0-staging]
+    branches: [test/public-1.11.0-rehearsal]
   workflow_dispatch:
 permissions:
   contents: read
 
 jobs:
   package:
-    if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.ref == 'refs/heads/test/public-1.11.0-staging'
+    if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.ref == 'refs/heads/test/public-1.11.0-rehearsal'
     runs-on: windows-latest
     timeout-minutes: 20
     permissions:
@@ -30,26 +30,26 @@ jobs:
           if ((Get-FileHash release/original-setup.exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'd4d44c84b086627e07920648800d553d168d9176bc0400740158b5d932149263') { throw 'Public installer checksum mismatch' }
           7z e release/original-setup.exe '$PLUGINSDIR/app-64.7z' -orelease/installer -y
           if ($LASTEXITCODE -ne 0) { throw 'Installer extraction failed' }
-          7z x release/installer/app-64.7z -orelease/public-staging -y
+          7z x release/installer/app-64.7z -orelease/public-rehearsal -y
           if ($LASTEXITCODE -ne 0) { throw 'Application extraction failed' }
-      - name: Add staging CSP origin and verify archive parity
-        run: node tooling/package-public-staging.cjs
-      - name: Test the public Windows executable against staging
-        run: node tooling/smoke-public-staging.cjs
+      - name: Add rehearsal CSP origin and verify archive parity
+        run: node tooling/package-public-rehearsal.cjs
+      - name: Test the public Windows executable against rehearsal
+        run: node tooling/smoke-public-rehearsal.cjs
       - name: Package Windows ZIP
         shell: pwsh
         run: |
           # Startup writes logs beside the executable; exclude CI-generated logs.
-          Get-ChildItem release/public-staging -Filter 'rock_buddy_log*.txt' | Remove-Item
-          7z a -tzip release/Rock-Buddy-1.11.0-Staging-Compatibility.zip ./release/public-staging/*
+          Get-ChildItem release/public-rehearsal -Filter 'rock_buddy_log*.txt' | Remove-Item
+          7z a -tzip release/Rock-Buddy-1.11.0-Rehearsal-Compatibility.zip ./release/public-rehearsal/*
           if ($LASTEXITCODE -ne 0) { throw 'ZIP creation failed' }
-          $hash = (Get-FileHash release/Rock-Buddy-1.11.0-Staging-Compatibility.zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  Rock-Buddy-1.11.0-Staging-Compatibility.zip" | Set-Content release/SHA256SUMS.txt
+          $hash = (Get-FileHash release/Rock-Buddy-1.11.0-Rehearsal-Compatibility.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Rock-Buddy-1.11.0-Rehearsal-Compatibility.zip" | Set-Content release/SHA256SUMS.txt
       - name: Publish test download on the fork
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "public-staging-${{ github.run_id }}-${{ github.run_attempt }}" release/Rock-Buddy-1.11.0-Staging-Compatibility.zip release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Public 1.11.0 — staging compatibility' --notes-file PUBLIC-STAGING.md --prerelease --latest=false
+          gh release create "public-rehearsal-${{ github.run_id }}-${{ github.run_attempt }}" release/Rock-Buddy-1.11.0-Rehearsal-Compatibility.zip release/SHA256SUMS.txt --target '${{ github.sha }}' --title 'Public 1.11.0 — rehearsal compatibility' --notes-file PUBLIC-REHEARSAL.md --prerelease --latest=false
           if ($LASTEXITCODE -ne 0) { throw 'Test release publication failed' }
