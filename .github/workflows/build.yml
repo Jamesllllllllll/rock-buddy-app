@@ -69,6 +69,7 @@ jobs:
           path: |
             release/beta/*-Setup.exe
             release/beta/SHA256SUMS.txt
+            release/beta/beta-login.png
           if-no-files-found: error
           retention-days: 14
 

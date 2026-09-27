@@ -87,7 +87,13 @@ const product = beta ? 'Beta' : 'Staging';
                         detected.push(await window.api.resolveRocksmithConfig());
                     }
                     await window.api.storeDelete('auth_data');
-                    return {host: await window.api.getHost(), notice: document.getElementById('beta-notice')?.textContent, version: await window.api.getVersion(),
+                    const host = await window.api.getHost();
+                    const version = await window.api.getVersion();
+                    const probe = await fetch(host + '/api/auth/login.php', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({version}), signal: AbortSignal.timeout(10000)
+                    });
+                    return {probe: {status: probe.status, body: await probe.json()}, host, notice: document.getElementById('beta-notice')?.textContent, version: await window.api.getVersion(),
                         sentinel: await window.api.storeGet('stagingSmokeSentinel'), detected};
                 })()`,
                 awaitPromise: true, returnByValue: true,
@@ -106,19 +112,26 @@ const product = beta ? 'Beta' : 'Staging';
         for (const config of response.result.result.value.detected) {
             assert.equal(config?.profilePath, path.join(remote, 'ci-profile_PRFLDB'), 'Fresh accounts discover the profile without Config');
         }
-        const versionCheck = await fetch(HOSTS[channel] + '/api/auth/login.php', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ version: response.result.result.value.version }),
-            signal: AbortSignal.timeout(10000),
-        });
-        // A draft installer can be checked while the beta database is still being prepared.
-        // Publishing remains a separate step after the backend acceptance checks pass.
-        const versionResult = await versionCheck.json();
-        if (beta && versionCheck.status === 503) {
-            assert.deepEqual(versionResult, { error: 'Rock Buddy is undergoing maintenance. Please try again later.' });
+        // Verify a real renderer request under the installed app's security policy.
+        // Maintenance is allowed for draft builds; publication still requires backend acceptance.
+        const probe = response.result.result.value.probe;
+        if (beta && probe.status === 503) {
+            assert.deepEqual(probe.body, { error: 'Rock Buddy is undergoing maintenance. Please try again later.' });
         } else {
-            assert.equal(versionCheck.status, 400, 'Packaged version must pass the live API version gate');
-            assert.deepEqual(versionResult, { error: 'Invalid JSON data.' });
+            assert.equal(probe.status, 400, 'Packaged version must pass the live API version gate');
+            assert.deepEqual(probe.body, { error: 'Invalid JSON data.' });
+        }
+        if (beta) {
+            const screenshot = await new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error('Screenshot timed out')), 10000);
+                socket.addEventListener('message', event => {
+                    const data = JSON.parse(event.data);
+                    if (data.id === 2) { clearTimeout(timer); resolve(data); }
+                });
+                socket.send(JSON.stringify({id: 2, method: 'Page.captureScreenshot', params: {format: 'png'}}));
+            });
+            assert.ok(screenshot.result?.data, 'Capture installed beta login screen');
+            fs.writeFileSync(path.join(out, 'beta-login.png'), Buffer.from(screenshot.result.data, 'base64'));
         }
         assert.equal(fs.readFileSync(productionConfig, 'utf8'), sentinel);
         assert.ok(fs.existsSync(path.join(process.env.APPDATA, `rock-buddy-${channel}/config-${channel}.json`)));
