@@ -2,15 +2,16 @@ const { createHash } = require('node:crypto');
 
 const HOSTS = Object.freeze({
     production: 'https://rock-buddy.com',
-    staging: 'https://rock-buddy-site-staging.rock-buddy.workers.dev',
+    staging: 'https://rock-buddy-site-staging.tntmusicstudios-c64.workers.dev',
+    beta: 'https://rock-buddy-site-rehearsal.tntmusicstudios-c64.workers.dev',
     local: 'http://localhost:8787',
 });
 
 function resolveBackend(args = [], packagedBackend = "production") {
-    if (!["production", "staging"].includes(packagedBackend)) throw new Error("Unknown packaged backend.");
+    if (!["production", "staging", "beta"].includes(packagedBackend)) throw new Error("Unknown packaged backend.");
     const selectors = args.filter(arg => arg.startsWith('--backend=') || !arg.startsWith('-'));
     if (args.includes('--backend') || selectors.length > 1) {
-        throw new Error('Use one --backend=production|staging|local selector or one backend URL.');
+        throw new Error('Use one --backend=production|staging|beta|local selector or one backend URL.');
     }
     const selected = selectors[0] || `--backend=${packagedBackend}`;
     const name = selected.startsWith('--backend=') ? selected.slice(10) : null;
@@ -26,8 +27,12 @@ function resolveBackend(args = [], packagedBackend = "production") {
     if (packagedBackend === "staging" && host !== HOSTS.staging) {
         throw new Error("Rock Buddy Staging only connects to staging.");
     }
+    if (packagedBackend === "beta" && host !== HOSTS.beta) {
+        throw new Error("Rock Buddy Beta only connects to the beta test backend.");
+    }
     if (host === HOSTS.production) return { host, storeOptions: {}, webPreferences: {} };
-    const suffix = host === HOSTS.staging ? 'staging' :
+    const suffix = host === HOSTS.beta ? 'beta' :
+        host === HOSTS.staging ? 'staging' :
         host === HOSTS.local ? 'local' : createHash('sha256').update(host).digest('hex').slice(0, 16);
     return {
         host,

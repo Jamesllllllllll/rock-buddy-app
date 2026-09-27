@@ -22,6 +22,16 @@ const backend = resolveBackend(process.argv.slice(app.isPackaged ? 1 : 2), packa
 // including launches from Explorer, shortcuts, or another working directory.
 if (app.isPackaged) process.chdir(path.dirname(app.getPath('exe')));
 const host = backend.host;
+const isCommunityBeta = packageInfo.rockBuddyBackend === 'beta';
+const betaNotice = 'Rock Buddy Beta — Test scores and account changes stay here and will be discarded after testing.';
+
+// Keep beta credentials and preferences separate even when launched from a shortcut.
+if (isCommunityBeta) {
+    const betaUserData = path.join(app.getPath('appData'), 'rock-buddy-beta');
+    fs.mkdirSync(betaUserData, { recursive: true });
+    app.setPath('userData', betaUserData);
+    if (process.platform === 'win32') app.setAppUserModelId('com.rockbuddy.beta');
+}
 
 const currentVersion = packageInfo.version;
 let onLatestVersion = false;
@@ -296,6 +306,16 @@ function createWindow() {
         },
         icon: path.join(__dirname, '..', 'images', 'favicon.ico')
     });
+
+    // Keep every page visibly labeled, including login and account screens.
+    if (isCommunityBeta) {
+        const title = `Rock Buddy Beta v${currentVersion}`;
+        win.setTitle(title);
+        win.on('page-title-updated', event => {
+            event.preventDefault();
+            win.setTitle(title);
+        });
+    }
 
     let resizeTimer;
     win.on('resize', () => {
@@ -794,6 +814,8 @@ function createWindow() {
 
     checkForUpdates(win);
 }
+
+ipcMain.handle('get-beta-notice', () => isCommunityBeta ? betaNotice : null);
 
 app.on('ready', createWindow);
 

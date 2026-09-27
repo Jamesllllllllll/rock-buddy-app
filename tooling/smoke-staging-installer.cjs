@@ -8,13 +8,16 @@ const { createCipheriv } = require('node:crypto');
 const { deflateSync } = require('node:zlib');
 const { extractFile, listPackage } = require('@electron/asar');
 const { HOSTS } = require('../src/backend-config');
+const beta = process.argv.includes('--beta');
+const channel = beta ? 'beta' : 'staging';
+const product = beta ? 'Beta' : 'Staging';
 
 (async () => {
     assert.equal(process.platform, 'win32');
-    const out = path.resolve('release/staging');
+    const out = path.resolve(`release/${channel}`);
     const installers = fs.readdirSync(out).filter(name => name.endsWith('-Setup.exe'));
     assert.equal(installers.length, 1, 'Exactly one installer expected');
-    const install = path.join(os.tmpdir(), 'rock-buddy-staging-smoke');
+    const install = path.join(os.tmpdir(), `rock-buddy-${channel}-smoke`);
     const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
         '$p = Start-Process -FilePath $env:SMOKE_INSTALLER -ArgumentList @("/S", "/D=$env:SMOKE_INSTALL_DIR") -Wait -PassThru; exit $p.ExitCode',
     ], { timeout: 120000, stdio: 'inherit', env: { ...process.env, SMOKE_INSTALLER: path.join(out, installers[0]), SMOKE_INSTALL_DIR: install } });
@@ -26,8 +29,8 @@ const { HOSTS } = require('../src/backend-config');
     assert.equal(result.status, 0, 'NSIS install must succeed');
     const asar = path.join(install, 'resources/app.asar');
     const metadata = JSON.parse(extractFile(asar, 'package.json'));
-    assert.equal(metadata.name, 'rock-buddy-staging');
-    assert.equal(metadata.rockBuddyBackend, 'staging');
+    assert.equal(metadata.name, `rock-buddy-${channel}`);
+    assert.equal(metadata.rockBuddyBackend, channel);
     assert.ok(!listPackage(asar).some(file => /(?:\.private|\.env|rock_buddy_log|node_modules\/\.cache)/.test(file)));
     for (const file of ['RockSniffer.exe', 'coreclr.dll', 'hostfxr.dll']) {
         assert.ok(fs.existsSync(path.join(install, 'RockSniffer', file)), `Bundled runtime: ${file}`);
@@ -50,7 +53,7 @@ const { HOSTS } = require('../src/backend-config');
     cipher.setAutoPadding(false);
     fs.writeFileSync(path.join(remote, 'LocalProfiles.json'), Buffer.concat([Buffer.alloc(20), cipher.update(padded), cipher.final()]));
     fs.writeFileSync(path.join(remote, 'ci-profile_PRFLDB'), 'synthetic profile placeholder');
-    const child = spawn(path.join(install, 'RockBuddyStaging.exe'), ['--remote-debugging-port=9333'], {
+    const child = spawn(path.join(install, `RockBuddy${product}.exe`), ['--remote-debugging-port=9333'], {
         cwd: os.tmpdir(), stdio: 'ignore',
     });
     let socket;
@@ -84,7 +87,7 @@ const { HOSTS } = require('../src/backend-config');
                         detected.push(await window.api.resolveRocksmithConfig());
                     }
                     await window.api.storeDelete('auth_data');
-                    return {host: await window.api.getHost(), version: await window.api.getVersion(),
+                    return {host: await window.api.getHost(), notice: document.getElementById('beta-notice')?.textContent, version: await window.api.getVersion(),
                         sentinel: await window.api.storeGet('stagingSmokeSentinel'), detected};
                 })()`,
                 awaitPromise: true, returnByValue: true,
@@ -92,21 +95,34 @@ const { HOSTS } = require('../src/backend-config');
         });
         assert.ok(!response.error && !response.result?.exceptionDetails,
             'Preload/renderer check failed: ' + JSON.stringify(response.error || response.result?.exceptionDetails));
-        assert.equal(response.result.result.value.host, HOSTS.staging);
+        assert.equal(response.result.result.value.host, HOSTS[channel]);
+        if (beta) {
+            assert.match(response.result.result.value.notice, /Rock Buddy Beta.*will be discarded/);
+            const windowTitle = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+                `(Get-Process -Id ${child.pid}).MainWindowTitle`], { encoding: 'utf8' });
+            assert.match(windowTitle.stdout, /Rock Buddy Beta v1\.11\.0-beta/);
+        }
         assert.equal(response.result.result.value.sentinel, null);
         for (const config of response.result.result.value.detected) {
             assert.equal(config?.profilePath, path.join(remote, 'ci-profile_PRFLDB'), 'Fresh accounts discover the profile without Config');
         }
-        const versionCheck = await fetch(HOSTS.staging + '/api/auth/login.php', {
+        const versionCheck = await fetch(HOSTS[channel] + '/api/auth/login.php', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ version: response.result.result.value.version }),
             signal: AbortSignal.timeout(10000),
         });
-        assert.equal(versionCheck.status, 400, 'Packaged version must pass the live API version gate');
-        assert.deepEqual(await versionCheck.json(), { error: 'Invalid JSON data.' });
+        // A draft installer can be checked while the beta database is still being prepared.
+        // Publishing remains a separate step after the backend acceptance checks pass.
+        const versionResult = await versionCheck.json();
+        if (beta && versionCheck.status === 503) {
+            assert.deepEqual(versionResult, { error: 'Rock Buddy is undergoing maintenance. Please try again later.' });
+        } else {
+            assert.equal(versionCheck.status, 400, 'Packaged version must pass the live API version gate');
+            assert.deepEqual(versionResult, { error: 'Invalid JSON data.' });
+        }
         assert.equal(fs.readFileSync(productionConfig, 'utf8'), sentinel);
-        assert.ok(fs.existsSync(path.join(process.env.APPDATA, 'rock-buddy-staging/config-staging.json')));
-        console.log('NSIS install, packaged startup, staging routing, runtime bundling, production settings isolation, and fresh-account profile discovery passed.');
+        assert.ok(fs.existsSync(path.join(process.env.APPDATA, `rock-buddy-${channel}/config-${channel}.json`)));
+        console.log('NSIS install, packaged startup, backend routing, runtime bundling, production settings isolation, and fresh-account profile discovery passed.');
     } finally {
         socket?.close();
         if (child.pid) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });

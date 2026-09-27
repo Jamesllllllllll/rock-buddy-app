@@ -1,3 +1,6 @@
+For the community installer and real-data test, see [Rock Buddy Beta](beta.md).
+The staging notes below describe earlier test builds.
+
 # Backend migration testing
 
 Download the **Setup.exe** from a staging prerelease in

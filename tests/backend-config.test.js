@@ -49,3 +49,15 @@ test('staging installers select staging without flags and reject backend overrid
     }
     assert.throws(() => resolveBackend([], 'unknown'), /Unknown packaged backend/);
 });
+
+test('beta installs use isolated settings and cannot select another backend', () => {
+    const beta = resolveBackend([], 'beta');
+    assert.equal(beta.host, HOSTS.beta);
+    assert.equal(beta.storeOptions.name, 'config-beta');
+    assert.equal(beta.webPreferences.partition, 'persist:rock-buddy-beta');
+    assert.deepEqual(resolveBackend(['--remote-debugging-port=9333'], 'beta'), beta);
+    assert.deepEqual(resolveBackend(['--backend=beta'], 'beta'), beta);
+    for (const host of [HOSTS.production, HOSTS.staging, HOSTS.local, 'https://example.invalid']) {
+        assert.throws(() => resolveBackend([host], 'beta'), /only connects to the beta test backend/);
+    }
+});

@@ -47,3 +47,16 @@ export const API = {
 };
 
 contextBridge.exposeInMainWorld('api', API);
+
+// Keep the test-data warning visible on every beta page without changing normal installs.
+window.addEventListener('DOMContentLoaded', async () => {
+    const message = await ipcRenderer.invoke('get-beta-notice');
+    if (!message) return;
+
+    const notice = document.createElement('div');
+    notice.id = 'beta-notice';
+    notice.setAttribute('role', 'note');
+    notice.textContent = message;
+    notice.style.cssText = 'padding: 8px 12px; background: #422b12; color: #fff3d6; font: 14px/1.4 sans-serif;';
+    document.body.prepend(notice);
+});
