@@ -276,41 +276,14 @@ export async function getVersion(): Promise<string | null> {
 }
 
 export async function post(url: string, data: any) {
-    // Add version number to the data
-    data['version'] = await getVersion();
+    const response = await window.api.requestBackend(url, { ...data, version: await getVersion() });
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
-
-    // If the response is not OK log the response text
-    if (!response.ok) {
-
-        // Cloudflare returns a status of 530 when communication with the server is lost
-        if (response.status === 530) {
-            if (connected) {
-                connected = false;
-                window.api.error("Communication with server lost.");
-            }
-
-            return { 'error': "Communication with server lost." };
-        }
+    // Only an explicit authentication rejection ends the session; connection loss does not.
+    if (response.error === 'Invalid API key.') {
+        window.api.error('Please log back in to verify your identity.');
+        window.location.href = new URL('../auth/logout.html', window.location.href).href;
     }
-
-    // Server provided a response
-    connected = true;
-
-    const responseJson = await response.json();
-    if (responseJson.hasOwnProperty('error') && responseJson['error'] === 'Invalid API key.') {
-        window.api.error("Your API key has expired.\n\nPlease log back in to verify your identity.");
-        window.location.href = './logout.html';
-    }
-
-    return responseJson;
+    return response;
 }
 
 // If "Always Sniff" is enabled and Rock Buddy loses focus, jump to the sniffer page

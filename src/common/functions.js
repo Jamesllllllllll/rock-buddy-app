@@ -11,43 +11,14 @@ async function getVersion() {
 }
 
 async function post(url, data) {
-    // Add version number to the data
-    data['version'] = await getVersion();
+    const response = await window.api.requestBackend(url, { ...data, version: await getVersion() });
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-
-        // If the response is not OK log the response text
-        if (!response.ok) {
-
-            // Cloudflare returns a status of 530 when communication with the server is lost
-            // A status of 502 also indicates a Cloudflare issue
-            if (response.status === 530 || response.status === 502) {
-                console.error("Communication with server lost - HTML error code:" + response.status);
-                throw new Error("Communication with server lost.");
-            }
-        }
-
-        let responseJson = await response.json();
-        if (responseJson.hasOwnProperty('error')) {
-            if (responseJson['error'] === 'Invalid API key.') {
-                responseJson['error'] = "Your API key has expired.\n\nPlease log back in to verify your identity.";
-                window.location.href = './logout.html';
-            }
-        }
-
-        return responseJson;
-    } catch (error) {
-        return {
-            error: error.toString()
-        };
+    // Only an explicit authentication rejection ends the session; connection loss does not.
+    if (response.error === 'Invalid API key.') {
+        window.api.error('Please log back in to verify your identity.');
+        window.location.href = new URL('../auth/logout.html', window.location.href).href;
     }
+    return response;
 }
 
 async function authenticate(authData) {

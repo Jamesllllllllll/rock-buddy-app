@@ -1,7 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const Store = require('electron-store').default;
 const aesjs = require('aes-js');
-const axios = require('axios');
 const http = require('http');
 const path = require('path');
 const openFileExplorer = require('open-file-explorer');
@@ -10,19 +9,53 @@ const glob = require('glob');
 const semver = require('semver');
 const { spawn } = require('child_process');
 const { unzipSync } = require('node:zlib');
+const { resolveRocksmithConfig } = require('./rocksmith-config');
+const { approveProfileImport } = require('./profile-import');
+const profileImportDecisions = new Map();
+const { createBackendClient, CONNECTION_MESSAGE } = require('./backend-client');
+const { createDesktopUpdates, updatesEnabled } = require('./desktop-updates');
+const { supportUrl } = require('./support-link');
+let desktopUpdates = null;
+let playing = false;
+let lastGameplayReport = 0;
+
+// Share status across page navigation without logging request bodies or credentials.
+function broadcast(channel, state) {
+    for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send(channel, state);
+    }
+}
 
 // Process input args
-const args = process.argv.slice(2);
-const host = args[0] || 'https://rock-buddy.com';
+const { HOSTS, resolveBackend } = require('./backend-config');
+const packageInfo = require('../package.json');
+const backend = resolveBackend(process.argv.slice(app.isPackaged ? 1 : 2), packageInfo.rockBuddyBackend);
+// Packaged assets and writable bundled helpers are relative to the install directory,
+// including launches from Explorer, shortcuts, or another working directory.
+if (app.isPackaged) process.chdir(path.dirname(app.getPath('exe')));
+const host = backend.host;
+const backendClient = createBackendClient(host, {
+    onState: state => broadcast('connection-state', state),
+});
+const isCommunityBeta = packageInfo.rockBuddyBackend === 'beta';
+const betaNotice = 'Rock Buddy Beta — Test scores and account changes stay here and will be discarded after testing.';
 
-const currentVersion = require('../package.json').version;
+// Keep beta credentials and preferences separate even when launched from a shortcut.
+if (isCommunityBeta) {
+    const betaUserData = path.join(app.getPath('appData'), 'rock-buddy-beta');
+    fs.mkdirSync(betaUserData, { recursive: true });
+    app.setPath('userData', betaUserData);
+    if (process.platform === 'win32') app.setAppUserModelId('com.rockbuddy.beta');
+}
+
+const currentVersion = packageInfo.version;
 let onLatestVersion = false;
 
 // Check if in dev environment
 const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
 
 // Store for user config data
-const store = new Store();
+const store = new Store(backend.storeOptions);
 
 // Define Rocksmith app ID
 const rocksmithAppId = 221680;
@@ -74,68 +107,44 @@ function logMessage(message) {
     fs.appendFileSync("rock_buddy_log_" + year + "-" + month + "-" + day + ".txt", formattedDate + ': ' + text + "\n");
 }
 
-async function getAllReleases(owner, repo) {
-    try {
-        const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/releases`);
-        const releases = response.data.map((release) => release.tag_name);
-        return releases;
-    } catch (error) {
-        console.error('Error fetching releases:', error);
-        return [];
-    }
-}
-
+// Keep updates on the installer-provided feed; source and custom-backend launches cannot update.
 function checkForUpdates(win) {
-    console.log("Checking for updates...");
-
-    const owner = 'tnt-coders';
-    const repo = 'rock-buddy-app';
-
-    getAllReleases(owner, repo).then((releases) => {
-        const authData = store.get('auth_data');
-        let betaTesting = false;
-        if (authData !== undefined)
-        {
-            const userId = authData['user_id'];
-            betaTesting = store.get('user_data.' + userId + '.beta_testing');
-        }
-
-        for (let i = 0; i < releases.length; i++) {
-            let version = releases[i];
-
-            // Ignore pre-release versions
-            if (semver.prerelease(version)) {
-                
-                if (!betaTesting) {
-                    continue;
+    if (!updatesEnabled(app.isPackaged, process.platform, host, packageInfo.rockBuddyBackend, HOSTS)) return;
+    const { autoUpdater } = require('electron-updater');
+    desktopUpdates = createDesktopUpdates(autoUpdater, {
+        version: currentVersion,
+        allowBeta: () => {
+            if (isCommunityBeta) return true;
+            const id = store.get('auth_data')?.user_id;
+            return id !== undefined && store.get(`user_data.${id}.beta_testing`) === true;
+        },
+        canInstall: async () => {
+            if (backendClient.isBusy()) return false;
+            // Recheck gameplay immediately before installing, including when Sniffer is not the open page.
+            try {
+                const configFile = path.join(process.cwd(), 'RockSniffer', 'config', 'addons.json');
+                const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+                const response = await fetch(`http://127.0.0.1:${config.port || 9002}`, { signal: AbortSignal.timeout(1500) });
+                const snapshot = await response.json();
+                if (!response.ok || typeof snapshot.RocksmithFound !== 'boolean') return false;
+                if (snapshot.RocksmithFound) {
+                    if (!Number.isFinite(snapshot.memoryReadout?.songTimer)) return false;
+                    if (snapshot.memoryReadout.songTimer > 0) return false;
                 }
+            } catch {
+                // If the helper is running but unreadable, wait instead of risking a song interruption.
+                if (playing || (rocksnifferChildProcess && rocksnifferChildProcess.exitCode === null)) return false;
             }
-            
-            if (semver.gt(version, currentVersion)) {
-
-                // Create popup
-                const options = {
-                    type: 'question',
-                    buttons: ['Proceed to download page', 'Close'],
-                    defaultId: 0,
-                    title: 'Update Available',
-                    message: 'A new version of Rock Buddy is available!'
-                };
-
-                dialog.showMessageBox(options).then(response => {
-                    if (response.response === 0) {
-                        const url = `https://github.com/${owner}/${repo}/releases/tag/${version}`;
-                        shell.openExternal(url);
-                    }
-                });
-
-                break;
-            }
-            else {
-                onLatestVersion = true;
-            }
-        };
+            return !(playing && Date.now() - lastGameplayReport < 2000) && !backendClient.isBusy();
+        },
+        onState: state => broadcast('update-state', state),
+        onLatest: latest => { onLatestVersion = latest; },
     });
+
+    void desktopUpdates.check();
+    const timer = setInterval(() => void desktopUpdates.check(), 4 * 60 * 60 * 1000);
+    timer.unref();
+    win.on('closed', () => clearInterval(timer));
 }
 
 // Initialize some app data
@@ -214,11 +223,14 @@ function getSteamProfiles(steamUserDataPath) {
 
 function getRocksmithProfiles(steamUserDataPath, steamProfile) {
     let profiles = {};
+    if (!steamUserDataPath || !steamProfile) return profiles;
     const rocksmithDataFolder = path.join(steamUserDataPath, steamProfile.toString(), rocksmithAppId.toString(), 'remote');
     const localProfilesFile = path.join(rocksmithDataFolder, 'LocalProfiles.json');
+    if (!fs.existsSync(localProfilesFile)) return profiles;
 
     // Read the localProfiles.json file to get the list of available profiles
     const localProfiles = readRocksmithData(localProfilesFile);
+    if (!Array.isArray(localProfiles?.Profiles)) return profiles;
     localProfiles['Profiles'].forEach((profile) => {
         profiles[profile['PlayerName']] = profile['UniqueID'];
     });
@@ -278,10 +290,21 @@ function createWindow() {
         height: screenHeight,
         webPreferences: {
             preload: path.join(__dirname, '..', 'dist', 'preload.js'),
-            backgroundThrottling: false
+            backgroundThrottling: false,
+            ...backend.webPreferences
         },
         icon: path.join(__dirname, '..', 'images', 'favicon.ico')
     });
+
+    // Keep every page visibly labeled, including login and account screens.
+    if (isCommunityBeta) {
+        const title = `Rock Buddy Beta v${currentVersion}`;
+        win.setTitle(title);
+        win.on('page-title-updated', event => {
+            event.preventDefault();
+            win.setTitle(title);
+        });
+    }
 
     let resizeTimer;
     win.on('resize', () => {
@@ -479,6 +502,7 @@ function createWindow() {
     });
 
     ipcMain.on('error', (event, message) => {
+        if (message === CONNECTION_MESSAGE) return;
         dialog.showMessageBox({
             type: 'error',
             message: message,
@@ -525,11 +549,13 @@ function createWindow() {
 
     // Set persistent data
     ipcMain.handle('store-set', (event, key, value) => {
+        if (key === 'auth_data') profileImportDecisions.clear();
         store.set(key, value);
     });
 
     // Delete persistent data
     ipcMain.handle('store-delete', (event, key) => {
+        if (key === 'auth_data') profileImportDecisions.clear();
         store.delete(key);
     });
 
@@ -655,6 +681,54 @@ function createWindow() {
     });
 
     // Gets a map of Steam profiles and their corresponding folder names
+    ipcMain.handle('resolve-rocksmith-config', () => {
+        return resolveRocksmithConfig(store, store.get('auth_data')?.user_id, getSteamProfiles, getRocksmithProfiles);
+    });
+
+    ipcMain.handle('prepare-rocksmith-import', async () => {
+        const auth = store.get('auth_data');
+        if (!auth?.api_key) throw new Error('Please log in before importing Rocksmith history.');
+        const config = resolveRocksmithConfig(store, auth.user_id, getSteamProfiles, getRocksmithProfiles);
+        if (!config) return null;
+        const unchangedLogin = () => {
+            const current = store.get('auth_data');
+            if (current?.user_id !== auth.user_id || current?.api_key !== auth.api_key)
+                throw new Error('Login changed. Please reopen Sniffer.');
+        };
+        const profile = { steam_id: config.steamProfile, profile_id: config.rocksmithProfile, profile_name: config.profileName };
+        const key = JSON.stringify([auth.user_id, profile.steam_id, profile.profile_id]);
+        if (!profileImportDecisions.has(key)) {
+            const allowed = await approveProfileImport(profile, async (action, candidate) => {
+                unchangedLogin();
+                const response = await fetch(host + '/api/account/rocksmith_profile.php', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ version: currentVersion, auth_data: auth, action, profile: candidate }),
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (!response.ok) throw new Error('Could not check your linked Rocksmith profile. Please try again.');
+                const data = await response.json();
+                if (!Object.hasOwn(data, 'profile')) throw new Error('Invalid Rocksmith profile response.');
+                return data;
+            }, async (original, candidate) => {
+                unchangedLogin();
+                const result = await dialog.showMessageBox(win, {
+                    type: 'question', title: 'Rocksmith profile',
+                    message: original ? 'Import history from a different Rocksmith profile?' : 'Link this Rocksmith profile to your Rock Buddy account?',
+                    detail: original
+                        ? `Original: ${original.profile_name} (Steam ${original.steam_id})\nSelected: ${candidate.profile_name} (Steam ${candidate.steam_id})\n\nImport this profile's saved scores and play counts for this login? Your original link will stay unchanged. Skipping still allows new verified gameplay scores.`
+                        : `Selected: ${candidate.profile_name} (Steam ${candidate.steam_id})\n\nConfirm this is your Rocksmith profile. Rock Buddy will remember it across computers and import its saved scores and play counts. Skipping still allows new verified gameplay scores.`,
+                    buttons: ['Skip import', original ? 'Import this session' : 'Link profile'],
+                    defaultId: 0, cancelId: 0, noLink: true,
+                });
+                unchangedLogin();
+                return result.response === 1;
+            });
+            unchangedLogin();
+            profileImportDecisions.set(key, allowed);
+        }
+        return { ...config, importHistory: profileImportDecisions.get(key) };
+    });
+
     ipcMain.handle('get-steam-profiles', (event, steamUserDataPath) => {
         return getSteamProfiles(steamUserDataPath);
     });
@@ -730,6 +804,19 @@ function createWindow() {
 
     checkForUpdates(win);
 }
+
+ipcMain.handle('backend-post', (_event, url, data) => backendClient.post(url, data));
+ipcMain.handle('get-connection-state', () => backendClient.getState());
+ipcMain.handle('get-update-state', () => desktopUpdates?.getState() || { status: 'disabled', message: 'Updates are available in installed Windows builds.' });
+ipcMain.handle('check-desktop-update', () => desktopUpdates?.check());
+ipcMain.handle('install-desktop-update', () => desktopUpdates?.install());
+ipcMain.handle('open-support', () => shell.openExternal(supportUrl(host, HOSTS)));
+ipcMain.on('gameplay-state', (_event, active) => {
+    playing = active === true;
+    lastGameplayReport = Date.now();
+});
+
+ipcMain.handle('get-beta-notice', () => isCommunityBeta ? betaNotice : null);
 
 app.on('ready', createWindow);
 

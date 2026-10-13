@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 declare type windowResizeCallback = (width: number, height: number) => void;
 
 export const API = {
+    requestBackend: async (url: string, data: any) => ipcRenderer.invoke('backend-post', url, data),
+    setGameplayActive: (active: boolean) => ipcRenderer.send('gameplay-state', active),
     getRocksnifferPath: () => ipcRenderer.invoke('get-rocksniffer-path'),
     launchRocksniffer: () => ipcRenderer.send('launch-rocksniffer'),
     clearRocksnifferCache: () => ipcRenderer.send('clear-rocksniffer-cache'),
@@ -37,6 +39,8 @@ export const API = {
     semverMaxSatisfying: async (versions: string[], range: string) => ipcRenderer.invoke('semver-max-satisfying', versions, range),
     readRocksmithData: async (dataFile: string) => ipcRenderer.invoke('read-rocksmith-data', dataFile),
     getSteamProfiles: async (steamUserDataPath: string) => ipcRenderer.invoke('get-steam-profiles', steamUserDataPath),
+    resolveRocksmithConfig: async () => ipcRenderer.invoke('resolve-rocksmith-config'),
+    prepareRocksmithImport: async () => ipcRenderer.invoke('prepare-rocksmith-import'),
     getRocksmithProfiles: async (steamUserDataPath: string, steamProfile: string) => ipcRenderer.invoke('get-rocksmith-profiles', steamUserDataPath, steamProfile),
     openAddonsFolder: async () => ipcRenderer.send('open-addons-folder'),
     enableAddons: async (host: string, port: number) => ipcRenderer.send('enable-addons', host, port),
@@ -45,3 +49,80 @@ export const API = {
 };
 
 contextBridge.exposeInMainWorld('api', API);
+
+// Keep the test-data warning visible on every beta page without changing normal installs.
+window.addEventListener('DOMContentLoaded', async () => {
+    const message = await ipcRenderer.invoke('get-beta-notice');
+    if (!message) return;
+
+    const notice = document.createElement('div');
+    notice.id = 'beta-notice';
+    notice.setAttribute('role', 'note');
+    notice.textContent = message;
+    notice.style.cssText = 'padding: 8px 12px; background: #422b12; color: #fff3d6; font: 14px/1.4 sans-serif;';
+    document.body.prepend(notice);
+});
+
+// Keep connection status and update controls available on every page.
+window.addEventListener('DOMContentLoaded', async () => {
+    const bar = document.createElement('div');
+    bar.id = 'desktop-tools';
+    bar.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 12px;font:13px sans-serif;';
+    const updateLabel = document.createElement('span');
+    updateLabel.setAttribute('role', 'status');
+    const check = document.createElement('button');
+    check.textContent = 'Check for updates';
+    check.onclick = () => ipcRenderer.invoke('check-desktop-update');
+    const restart = document.createElement('button');
+    restart.textContent = 'Install and restart';
+    restart.onclick = () => ipcRenderer.invoke('install-desktop-update');
+    const later = document.createElement('button');
+    later.textContent = 'Later';
+    const support = document.createElement('button');
+    support.textContent = 'Support Rock Buddy';
+    support.onclick = () => ipcRenderer.invoke('open-support');
+    bar.append(support, check, updateLabel, restart, later);
+    document.body.prepend(bar);
+
+    let currentUpdate: any = null;
+    function showUpdate(state: any) {
+        if (!state) return;
+        currentUpdate = state;
+        const deferred = sessionStorage.getItem('deferred-update') === state.version;
+        const ready = state.status === 'ready' && !deferred;
+        restart.hidden = !ready;
+        later.hidden = !ready;
+        check.hidden = state.status === 'disabled';
+        check.disabled = ['checking', 'downloading'].includes(state.status);
+        updateLabel.textContent = state.status === 'disabled' || (state.status === 'ready' && deferred) ? '' : state.message;
+        if (state.status === 'downloading') updateLabel.textContent += ` ${Math.round(state.percent)}%`;
+    }
+    later.onclick = () => {
+        sessionStorage.setItem('deferred-update', currentUpdate.version);
+        showUpdate(currentUpdate);
+    };
+    check.onclick = async () => {
+        sessionStorage.removeItem('deferred-update');
+        showUpdate(await ipcRenderer.invoke('check-desktop-update'));
+    };
+    ipcRenderer.on('update-state', (_event: any, state: any) => showUpdate(state));
+    showUpdate(await ipcRenderer.invoke('get-update-state'));
+
+    const connection = document.createElement('div');
+    connection.id = 'connection-notice';
+    connection.setAttribute('role', 'status');
+    connection.style.cssText = 'padding:8px 12px;background:#422b12;color:#fff3d6;font:14px sans-serif;';
+    const connectionLabel = document.createElement('span');
+    const retry = document.createElement('button');
+    retry.textContent = 'Reload page';
+    retry.onclick = () => window.location.reload();
+    connection.append(connectionLabel, document.createTextNode(' '), retry);
+    bar.after(connection);
+
+    function showConnection(state: any) {
+        connection.hidden = state.connected;
+        connectionLabel.textContent = state.message;
+    }
+    ipcRenderer.on('connection-state', (_event: any, state: any) => showConnection(state));
+    showConnection(await ipcRenderer.invoke('get-connection-state'));
+});

@@ -33,6 +33,7 @@ export class Profile {
     }
 
     private async save(): Promise<void> {
+        if (this._twitchUsenameElement.disabled) return;
         const twitchUsername = this._twitchUsenameElement.value;
 
         const host = await window.api.getHost();
@@ -60,6 +61,9 @@ export class Profile {
             return;
         }
 
+        this._twitchUsenameElement.disabled = false;
+        this._saveButtonElement.removeAttribute('disabled');
+
         // Update the display
         this._titleElement.innerText = 'Profile (' + response['username'] + ')';
         this._twitchUsenameElement.value = response['twitch_username'];
@@ -74,6 +78,11 @@ export class Profile {
         });
 
         if ('error' in response) {
+            for (const element of [this._verifiedScoresOverallElement, this._verifiedScoresLeadElement,
+                this._verifiedScoresRhythmElement, this._verifiedScoresBassElement, this._accuracyOverallElement,
+                this._accuracyLeadElement, this._accuracyRhythmElement, this._accuracyBassElement]) {
+                element.innerText = 'Unavailable';
+            }
             window.api.error(response['error']);
             return;
         }
@@ -90,6 +99,8 @@ export class Profile {
     }
 
     private async init(): Promise<void> {
+        this._twitchUsenameElement.disabled = true;
+        this._saveButtonElement.setAttribute('disabled', '');
         this._saveButtonElement.addEventListener('click', this.save.bind(this));
         this.load();
     }

@@ -33,6 +33,9 @@ export class Sniffer {
     // Prevent explosion of error messages
     private _lastErrorMessage: string = '';
     private _syncErrorDisplayed: boolean = false;
+    private _syncActive: boolean = false;
+    private _syncSongId: string | null = null;
+    private _retrySyncAt: number = 0;
 
     // Game mode/path/difficulty combo box data
     private _preferredPath: string = 'lead';
@@ -325,17 +328,28 @@ export class Sniffer {
             
             const rocksnifferData = await this.sniff();
 
+            window.api.setGameplayActive(this._inSong || this._ending || rocksnifferData.memoryReadout?.songTimer > 0);
+
             // The path must be updated before snorting
             this.updatePath(rocksnifferData);
 
             // Check if it is time to snort
-            await this.checkSnort(rocksnifferData);
+            // Network sync runs separately so connection loss cannot freeze local gameplay.
+            if (!this._syncActive && Date.now() >= this._retrySyncAt) {
+                this._syncActive = true;
+                void this.checkSnort(rocksnifferData).catch(error => {
+                    this._retrySyncAt = Date.now() + 30000;
+                    this._snort = true;
+                    logMessage('Could not sync song history. Check your profile settings and connection.');
+                }).finally(() => { this._syncActive = false; });
+            }
 
             this.updateSongInfo(rocksnifferData);
             this.updateLiveFeed(rocksnifferData);
 
             // Monitor progress
             await this.monitorProgress(rocksnifferData);
+            window.api.setGameplayActive(this._inSong || this._ending);
 
             if (this._soundEffect.enabled()) {
                 this._soundEffect.update(rocksnifferData?.memoryReadout?.noteData?.TotalNotesMissed);
@@ -1028,7 +1042,9 @@ export class Sniffer {
             });
 
             if ('error' in response) {
-                window.api.error(response['error']);
+                window.api.error(response.connectionError
+                    ? 'Your verified score could not be uploaded. It will not be retried automatically. Reconnect before playing another song.'
+                    : response['error']);
             }
         }
 
@@ -1039,10 +1055,11 @@ export class Sniffer {
     private async checkSnort(rocksnifferData: any): Promise<void> {
         const snortButton = document.getElementById('snort') as HTMLButtonElement;
 
+        const previousData = this._previousRocksnifferData;
         const newProfileDataAvailable = await this._rocksmith.newProfileDataAvailable();
 
-        if (this._previousRocksnifferData !== null &&
-            rocksnifferData['songDetails']['songID'] !== this._previousRocksnifferData['songDetails']['songID']) {
+        if (rocksnifferData['songDetails']['songID'] !== this._syncSongId) {
+            this._syncSongId = rocksnifferData['songDetails']['songID'];
 
             // Hide the new version alert icon until after snorting is completed
             const newVersionAlertIconElement = document.getElementById('new_version_alert_icon') as HTMLElement;
@@ -1057,8 +1074,8 @@ export class Sniffer {
 
             // If new profile data is available AND the song is changing, snort the previous song data
             // This fixes a bug where rock buddy data would not be updated after playing a song in nonstop play
-            if (newProfileDataAvailable && rocksnifferData['memoryReadout']['gameStage'] === 'NonStopPlay_Hub') {
-                await this.snort(this._previousRocksnifferData);
+            if (previousData && newProfileDataAvailable && rocksnifferData['memoryReadout']['gameStage'] === 'NonStopPlay_Hub') {
+                await this.snort(previousData);
                 return;
             }
         }
@@ -1102,7 +1119,7 @@ export class Sniffer {
 
         // Grab current Rocksmith profile data
         const rocksmithData = await this._rocksmith.getProfileData();
-        if (rocksmithData === null) {
+        if (rocksmithData === null && this._rocksmith.importHistory) {
             throw new Error("Failed to read Rocksmith profile data. Please check your config settings.");
         }
 
@@ -1147,8 +1164,8 @@ export class Sniffer {
                 logMessage("ARRANGEMENT: " + arrangementData['name'] + " - " + arrangementData['note_data_hash']);
             }
 
-            const lasDataExists = rocksmithData['Stats']['Songs'].hasOwnProperty(hash);
-            const saDataExists = rocksmithData['SongsSA'].hasOwnProperty(hash);
+            const lasDataExists = rocksmithData !== null && rocksmithData['Stats']['Songs'].hasOwnProperty(hash);
+            const saDataExists = rocksmithData !== null && rocksmithData['SongsSA'].hasOwnProperty(hash);
             if (lasDataExists) {
                 arrangementData['mastery'] = rocksmithData['Stats']['Songs'][hash]['MasteryPeak'];
                 arrangementData['streak'] = rocksmithData['Stats']['Songs'][hash]['Streak'];
@@ -1184,10 +1201,13 @@ export class Sniffer {
         const synced = await this.syncWithServer(snortData);
 
         this._timeSinceLastSnort = 0;
-        this._snorted = true;
+        this._snorted = synced;
+        if (!synced) this._snort = true;
 
         // Show the leaderboard
-        if (synced) {
+        // A slow response for the previous song must not replace the new song's leaderboard.
+        const currentSong = this._previousRocksnifferData?.songDetails?.songID;
+        if (synced && (!currentSong || currentSong === rocksnifferData.songDetails.songID)) {
             await this.showLeaderboard(rocksnifferData);
         }
     }
@@ -1205,10 +1225,13 @@ export class Sniffer {
         const sync_response = await post(host + '/api/data/sniffer_sync.php', {
             auth_data: authData,
             song_data: snortData,
-            lurk_mode: this._lurkMode
+            lurk_mode: this._lurkMode || !this._rocksmith.importHistory
         });
 
         if ('error' in sync_response) {
+            this._retrySyncAt = Date.now() + Math.max(30000, sync_response.retryAfterMs || 0);
+            const leaderboard = document.getElementById('leaderboard_data');
+            if (leaderboard) leaderboard.textContent = 'Scores could not be refreshed. Retrying shortly.';
             if (!this._syncErrorDisplayed) {
                 window.api.error(sync_response['error']);
                 this._syncErrorDisplayed = true;
@@ -1219,6 +1242,7 @@ export class Sniffer {
         // If we make it this far it means we aren't getting the same sync error repeatedly
         // It is safe to display it again
         this._syncErrorDisplayed = false;
+        this._retrySyncAt = 0;
 
         const version_response = await post(host + '/api/data/get_versions.php', {
             auth_data: authData,
@@ -1226,6 +1250,7 @@ export class Sniffer {
         });
 
         if ('error' in version_response) {
+            this._retrySyncAt = Date.now() + 30000;
             window.api.error(version_response['error']);
             return false;
         }

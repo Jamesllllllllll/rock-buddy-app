@@ -8,7 +8,6 @@ async function main() {
 
     const accountInfo = await getAccountInfo(authData);
     if (!accountInfo) {
-        api.error('Failed to get account info.');
         return;
     }
 

@@ -15,8 +15,8 @@
       <input id="new_username" type="text" name="new_username"><br><br>
       <label for="password">Password:</label><br>
       <input id="password" type="password" name="password">
-      <p style="color: red;">Warning: You can only change your username once every 30 days.</p>
-      <input class="btn-primary" type="submit" value="Submit" onclick="changeUsername(event)"><br><br>
+      <p id="username_wait" style="color: red;">Warning: You can only change your username once every 30 days.</p>
+      <input id="submit_username" class="btn-primary" type="submit" value="Submit" onclick="changeUsername(event)"><br><br>
     </form>
     <a href="#" onclick="history.back()">Cancel</a>
   </div>
@@ -30,7 +30,7 @@
   <footer>
     <p>
     <div class="copyright">
-      Copyright &copy; 2025 <a class="tntrocks"
+      Copyright &copy; <span data-copyright-year></span> <a class="tntrocks"
         href="mailto:tntmusicstudios2018@gmail.com">TNTMusicStudios</a>
     </div>
     <div class="team-mem">
@@ -41,6 +41,7 @@
   <script src="../common/boulder_bro.js"></script>
   <script src="../common/functions.js"></script>
   <script src="../common/theme.js"></script>
+  <script src="../common/footer.js"></script>
   <script src="./change_username.js"></script>
 
   <select style="display: none;" id="theme-select" onchange="setTheme()">

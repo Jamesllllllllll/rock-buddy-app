@@ -1,22 +1,28 @@
 {
     "name": "rock-buddy",
-    "version": "1.11.0",
+    "version": "1.12.0-beta1",
     "description": "Rock Buddy",
     "main": "./src/main.js",
     "scripts": {
         "build": "python pre_build.py && tsc && webpack --mode=development",
         "start": "npm run build && electron .",
         "dev": "npm run build && electron . http://raspberrypi:8080",
-        "release": "git clean -dfX && git submodule foreach --recursive git clean -dfX && npm install && npm run build && electron-builder"
+        "release": "git clean -dfX && git submodule foreach --recursive git clean -dfX && npm install && npm run build && electron-builder",
+        "test": "node --test tests/*.test.js",
+        "start:staging": "npm run build && electron . --backend=staging",
+        "start:local": "npm run build && electron . --backend=local",
+        "package:desktop": "electron-builder --config electron-builder.release.cjs --win nsis --x64 --publish never",
+        "build:renderer": "tsc && webpack --mode=development",
+        "start:beta": "npm run build && electron . --backend=beta"
     },
     "author": "TNTMusicStudios",
     "license": "MIT",
     "dependencies": {
         "aes-js": "^3.1.2",
         "async-mutex": "^0.5.0",
-        "axios": "^1.13.1",
         "electron-is-dev": "^3.0.1",
         "electron-store": "^11.0.2",
+        "electron-updater": "6.8.9",
         "glob": "^11.0.3",
         "open-file-explorer": "^1.0.2",
         "semver": "^7.7.3"
@@ -24,6 +30,7 @@
     "devDependencies": {
         "electron": "^39.0.0",
         "electron-builder": "^26.0.12",
+        "js-yaml": "5.4.3",
         "msbuild": "^1.2.0",
         "typescript": "^5.9.3",
         "webpack": "^5.102.1",
