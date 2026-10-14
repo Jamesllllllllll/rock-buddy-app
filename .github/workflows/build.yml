@@ -1,7 +1,13 @@
 name: Build
-on: [push, pull_request, workflow_dispatch]
+on:
+  workflow_dispatch:
 permissions:
   contents: read
+
+# Historical branches retain explicit checks, not automatic installers or releases.
+concurrency:
+  group: historical-checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_on_win:
@@ -27,81 +33,3 @@ jobs:
       - name: Test RockSniffer profile observer
         run: dotnet test RockSniffer/RockSnifferLib/RockSnifferLib.Tests/RockSnifferLib.Tests.csproj --configuration Release
       - run: npm run build
-      - name: Publish self-contained RockSniffer for staging
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-        run: dotnet publish RockSniffer/RockSniffer/RockSniffer.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:LangVersion=12.0 -o .generated/rocksniffer-staging
-      # The legacy NSIS 3.0.4.1 System.dll intermittently crashes on fresh installs.
-      # Pin the maintained upstream bundle without upgrading the app dependencies.
-      - name: Prepare NSIS 3.12
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-        shell: pwsh
-        run: |
-          $root = Join-Path $env:RUNNER_TEMP 'rock-buddy-nsis'
-          New-Item -ItemType Directory -Path $root -Force | Out-Null
-          $archive = Join-Path $root 'bundle.tar.gz'
-          Invoke-WebRequest 'https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis%402.0.1/nsis-bundle-3.12.tar.gz' -OutFile $archive
-          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'fe36a357f3a220db893498e830fd80e0769768a18a99f4e4d2447b982538feed') { throw 'NSIS checksum mismatch' }
-          tar -xzf $archive -C $root
-          if ($LASTEXITCODE -ne 0) { throw 'NSIS extraction failed' }
-          $nsis = Join-Path $root 'nsis-bundle/windows'
-          # electron-builder 26 expects the compiler in Bin rather than the bundle root.
-          Copy-Item "$nsis/makensis.exe" "$nsis/Bin/makensis.exe"
-          Copy-Item "$root/nsis-bundle/elevate.exe" "$nsis/elevate.exe"
-          "ELECTRON_BUILDER_NSIS_DIR=$nsis" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Package staging installer
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-        run: npm run package:staging
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Install and smoke-test the packaged app
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-        run: node tooling/smoke-staging-installer.cjs
-      - name: Checksum staging installer
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-        shell: pwsh
-        run: |
-          Get-ChildItem release/staging/*-Setup.exe | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)"
-          } | Set-Content release/staging/SHA256SUMS.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-        with:
-          name: rock-buddy-staging-windows
-          path: |
-            release/staging/*-Setup.exe
-            release/staging/SHA256SUMS.txt
-          if-no-files-found: error
-          retention-days: 14
-
-  publish-staging:
-    needs: build_on_win
-    if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/staging-backend'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      STAGING_TAG: staging-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: rock-buddy-staging-windows
-          path: installer
-      - name: Publish staging prerelease
-        run: |
-          cat > notes.md <<'NOTES'
-          Download and run the Setup.exe, then open **Rock Buddy Staging**.
-
-          This separate installation connects only to Cloudflare staging and keeps its own settings and login. RockSniffer and its .NET runtime are bundled; no developer tools are required.
-
-          Close regular Rock Buddy before gameplay testing. Production accounts are not in staging. Use `FixtureLead` with password `Synthetic Rock Buddy password!` for the initial test.
-
-          Sniffer discovers a single local profile without visiting Config. Confirm your original Rocksmith profile once; the link follows your Rock Buddy account across PCs. A different selected save asks before importing history. You can skip that import and still record new verified gameplay. Approval lasts for this login and never replaces the original link. This checks the selected save, not the active in-game profile, which RockSniffer does not expose.
-
-          Windows installer/startup/isolation and profile-discovery checks run in CI. Repeat fresh-account startup and test the profile confirmation/skip flow on Windows. This preview is unsigned and Windows may show an unknown-publisher warning. Automatic updates are not enabled.
-          NOTES
-          gh release create "$STAGING_TAG" installer/*-Setup.exe installer/SHA256SUMS.txt \
-            --target "$GITHUB_SHA" --title "Rock Buddy Staging — build $GITHUB_RUN_NUMBER" \
-            --notes-file notes.md --prerelease --latest=false
