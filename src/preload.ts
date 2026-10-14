@@ -13,7 +13,6 @@ export const API = {
     getBetaNotice: (): Promise<string | null> => ipcRenderer.invoke('get-beta-notice'),
     getUpdateState: (): Promise<DesktopUpdateState> => ipcRenderer.invoke('get-update-state'),
     onUpdateState: (callback: (state: DesktopUpdateState) => void) => subscribe('update-state', callback),
-    checkDesktopUpdate: (): Promise<DesktopUpdateState | undefined> => ipcRenderer.invoke('check-desktop-update'),
     installDesktopUpdate: (): Promise<DesktopUpdateState | undefined> => ipcRenderer.invoke('install-desktop-update'),
     getConnectionState: (): Promise<ConnectionState> => ipcRenderer.invoke('get-connection-state'),
     onConnectionState: (callback: (state: ConnectionState) => void) => subscribe('connection-state', callback),

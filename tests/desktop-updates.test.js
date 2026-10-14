@@ -32,6 +32,25 @@ test('downloads automatically but requires a safe, explicit install request', as
     f.allowInstall();
     await f.controller.install();
     assert.equal(f.calls.installs, 1);
+    assert.equal(f.controller.getState().status, 'installing');
+    await f.controller.install();
+    assert.equal(f.calls.installs, 1);
+});
+
+test('an installation failure keeps the downloaded update available for retry', async () => {
+    const f = fixture(true);
+    f.updater.emit('update-downloaded', {version:'1.12.0-beta2'});
+    f.allowInstall();
+    f.updater.quitAndInstall = () => { throw new Error('Installer failed'); };
+    await f.controller.install();
+    assert.equal(f.controller.getState().status, 'ready');
+    assert.match(f.controller.getState().message, /Could not restart/);
+    f.updater.quitAndInstall = () => { f.calls.installs++; };
+    await f.controller.install();
+    assert.equal(f.calls.installs, 1);
+    f.updater.emit('error', new Error('Installer could not launch'));
+    assert.equal(f.controller.getState().status, 'ready');
+    assert.match(f.controller.getState().message, /Could not restart/);
 });
 
 test('rejects older, invalid, and opted-out beta versions', () => {

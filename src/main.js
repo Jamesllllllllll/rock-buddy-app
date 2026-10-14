@@ -140,7 +140,10 @@ function checkForUpdates(win) {
             }
             return !(playing && Date.now() - lastGameplayReport < 2000) && !backendClient.isBusy();
         },
-        onState: state => broadcast('update-state', state),
+        onState: state => {
+            if (state.status === 'error') logMessage(state.message);
+            broadcast('update-state', state);
+        },
         onLatest: latest => { onLatestVersion = latest; },
     });
 
@@ -800,7 +803,6 @@ function createWindow() {
 ipcMain.handle('backend-post', (_event, url, data) => backendClient.post(url, data));
 ipcMain.handle('get-connection-state', () => backendClient.getState());
 ipcMain.handle('get-update-state', () => desktopUpdates?.getState() || { status: 'disabled', message: 'Updates are available in installed Windows builds.' });
-ipcMain.handle('check-desktop-update', () => desktopUpdates?.check());
 ipcMain.handle('install-desktop-update', () => desktopUpdates?.install());
 // Checkout is available only to the bundled app's Support route.
 const appPage = pathToFileURL(path.join(__dirname, 'index.html')).href;

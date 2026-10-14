@@ -18,6 +18,10 @@ function createDesktopUpdates(updater, { version, allowBeta, canInstall, onState
     }
 
     function failed() {
+        if (state.status === 'installing') {
+            publish({ status: 'ready', message: 'Could not restart Rock Buddy. Please try again.' });
+            return;
+        }
         publish({ status: 'error', message: 'Could not update Rock Buddy. Try again later.' });
     }
 
@@ -53,9 +57,9 @@ function createDesktopUpdates(updater, { version, allowBeta, canInstall, onState
     });
     updater.on('error', failed);
 
-    // Manual and scheduled checks share a lock so they cannot start duplicate downloads.
+    // Scheduled checks share a lock so they cannot start duplicate downloads.
     async function check() {
-        if (checking || installing || ['downloading', 'ready'].includes(state.status)) return state;
+        if (checking || installing || ['downloading', 'ready', 'installing'].includes(state.status)) return state;
         checking = true;
         updater.allowPrerelease = allowBeta();
         updater.allowDowngrade = false;
@@ -72,8 +76,12 @@ function createDesktopUpdates(updater, { version, allowBeta, canInstall, onState
                 publish({ message: 'Finish playing and wait for score uploads before restarting.' });
                 return state;
             }
+            publish({ status: 'installing', message: 'Restarting Rock Buddy…' });
             updater.quitAndInstall(false, true);
-        } catch { failed(); }
+        } catch {
+            // Keep the downloaded update available after an installation failure.
+            publish({ status: 'ready', message: 'Could not restart Rock Buddy. Please try again.' });
+        }
         finally { installing = false; }
         return state;
     }

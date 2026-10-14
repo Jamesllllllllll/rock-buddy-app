@@ -1,5 +1,5 @@
 export interface DesktopUpdateState {
-    status: 'disabled' | 'idle' | 'checking' | 'downloading' | 'ready' | 'error';
+    status: 'disabled' | 'idle' | 'checking' | 'downloading' | 'ready' | 'installing' | 'error';
     message: string;
     version?: string | null;
     percent?: number;

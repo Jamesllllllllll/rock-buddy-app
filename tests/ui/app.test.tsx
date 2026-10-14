@@ -23,12 +23,6 @@ Object.assign(globalThis, {
     HTMLInputElement: window.HTMLInputElement,
     HTMLTextAreaElement: window.HTMLTextAreaElement,
 });
-window.HTMLDialogElement.prototype.showModal = function () {
-    this.open = true;
-};
-window.HTMLDialogElement.prototype.close = function () {
-    this.open = false;
-};
 
 function mockApi() {
     const stored = new Map<string, any>([['auth_data', { user_id: 1, api_key: 'synthetic' }]]);

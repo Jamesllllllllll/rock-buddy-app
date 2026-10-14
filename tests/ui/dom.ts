@@ -11,3 +11,7 @@ Object.assign(globalThis, {
     sessionStorage: dom.window.sessionStorage,
     IS_REACT_ACT_ENVIRONMENT: true,
 });
+
+// JSDOM does not implement native dialogs; actual focus trapping is checked in Electron.
+window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+window.HTMLDialogElement.prototype.close = function () { this.open = false; };

@@ -13,7 +13,7 @@ public release's recorded submodule commits.
 - Keeps recent page data visible during refreshes and remembers Search between
   visits. Adds loading states, bounded connection retries, and protection against
   saving account/profile forms whose data did not load.
-- Adds automatic update downloads with **Install and restart** and **Later**.
+- Adds automatic update downloads with **Restart now** and **Restart later**.
   Users on 1.11.0 must manually install this first update; later releases can be
   installed from inside the app. Restarting to install is blocked during gameplay
   and pending API requests.
@@ -41,7 +41,7 @@ advertised as fixed by this release.
    including gameplay on other tabs, account switching, connection loss, window
    restoration, and PayPal sandbox. Rehearsal scores do not reach production.
 3. Build and deliberately publish a higher Beta to the separate test update feed.
-   Prove A → B download, Later, install/restart, settings retention and a fresh
+   Prove A → B download, Restart later, install/restart, settings retention and a fresh
    score upload on Windows. Automated updater tests alone do not prove this.
 4. Resolve failures, record results, then mark the PR ready and merge after TNT's
    review. Manually build the stable production candidate, for example 1.12.0,
@@ -71,8 +71,8 @@ change is deployed and tested.
 > A new Rock Buddy update is available! Download and run the Windows installer
 > from [the release page](https://github.com/tnt-coders/rock-buddy-app/releases/latest)
 > to update your existing installation. This is a one-time manual update: the new
-> version downloads future updates automatically and lets you choose **Install
-> and restart** when you're ready, or **Later** to keep playing. It also keeps
+> version downloads future updates automatically and lets you choose **Restart now**
+> when you're ready, or **Restart later** to keep playing. It also keeps
 > tracking while you browse other tabs (except Config), remembers your window size and position,
 > and adds configurable Sniffer columns and PayPal support.
 
@@ -175,14 +175,18 @@ gameplay, upgrade, or PayPal sandbox acceptance below.
 
 ## Automatic updates
 
-Installed Windows builds check at startup, every four hours, and on request.
-A manual **Check for updates** control is available on Config. Background checks
-and the up-to-date state do not add a toolbar to other pages. Download progress,
-update errors, and an update ready to install appear when applicable.
-A newer permitted version downloads in the background with visible progress.
-The user chooses **Install and restart** or **Later**. Ordinary app exit never
-installs an update. Installation is blocked during detected gameplay or an API
-request, with an additional local RockSniffer check before restarting.
+Installed Windows builds check at startup and every four hours. There is no manual
+check button. The current version appears at the bottom left; checks and downloads
+run quietly, and background updater errors are recorded in the local log.
+
+Once an update is downloaded, a focused in-app dialog offers **Restart now** or
+**Restart later**. Escape and clicking outside do not dismiss it: choose a button.
+The dialog does not pause gameplay tracking, timers or uploads. Restart later
+leaves an **Update ready** control beside the version to reopen the dialog, and
+suppresses repeated prompts for that version during the current app session.
+Ordinary app exit never installs an update. Restart now remains subject to the
+main process's gameplay/upload checks; a blocked or failed restart leaves the
+choice available with an explanation.
 
 Production uses `tnt-coders/rock-buddy-app` releases and respects the user's beta
 preference. No downgrade is allowed. The test installer uses a separate generic
@@ -194,18 +198,22 @@ installer, its `.blockmap`, and `beta.yml` to a **prerelease** tagged `desktop-b
 in `Jamesllllllllll/rock-buddy-app`. This is not done by CI. Keep older installer
 assets available while updating the feed; upload the new files first and replace
 `beta.yml` last. No credentials are embedded in this public feed. An unpublished
-or missing feed produces a retryable update message, not a working update test.
+or missing feed is logged and retried by automatic checks; it is not a working update test.
 
-First seed that feed with the already installed `1.12.0-beta1` artifact, including
-its installer, blockmap and beta.yml. Checking from beta1 should then report that
-it is up to date. Actions artifacts alone are not an updater feed. Next, manually
-build `1.12.0-beta2` with the badge change and publish its files to the same feed,
+The feed now contains the already installed `1.12.0-beta1` artifact, including
+its installer, blockmap and beta.yml; the tester confirmed beta1 reports up to date.
+Actions artifacts alone are not an updater feed. Next, manually build
+`1.12.0-beta2` with the badge and update-dialog changes and publish to the same feed,
 replacing beta.yml last. Leave beta1 installed on the test PC so its updater,
 rather than a manual installation of beta2, performs the upgrade.
 
 Test A → B on Windows before public release: install A manually, retain login and
 settings, publish the chosen higher B to the test feed, check/download B, choose
-Later, restart normally without installation, then choose Install and restart.
+Restart later, restart normally without installation, then choose Restart now.
+Beta1 still uses its older Check for updates / Install and restart / Later controls.
+Beta2 introduces the dialog; proving that new dialog completes a real upgrade
+requires a higher test version afterward, selected deliberately rather than built
+on every push. To check immediately without a manual button, relaunch the app.
 Verify B, retained configuration, and a new score upload. Also test interrupted
 download/retry, no newer version, no downgrade, and clicking install during a song.
 

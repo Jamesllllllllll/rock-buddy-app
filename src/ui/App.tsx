@@ -4,6 +4,7 @@ import { SessionProvider, useSession, useAuth } from './Session';
 import { ThemeProvider } from './Theme';
 import { AppHeader } from './AppHeader';
 import { DesktopStatus } from './DesktopStatus';
+import { DesktopUpdates } from './DesktopUpdates';
 import { Footer } from './Footer';
 import { PageLoadingIndicator } from './PageData';
 import { BoulderBro } from './BoulderBro';
@@ -112,7 +113,7 @@ function Shell() {
     return (
         <ThemeProvider>
             <PageLoadingIndicator />
-            <DesktopStatus allowManualCheck={location.pathname === '/config'} />
+            <DesktopStatus />
             <AppHeader compact={state.status !== 'ready'} />
             {initial ? (
                 <main>
@@ -183,7 +184,7 @@ function Shell() {
                     </ScreenBoundary>
                 </SessionRuntime>
             )}
-            <Footer />
+            <Footer><DesktopUpdates /></Footer>
             <div className="team-link">
                 <Link to="/team">Team</Link>
             </div>

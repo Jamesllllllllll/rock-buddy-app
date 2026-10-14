@@ -14,6 +14,7 @@ import {
 } from '@testing-library/react';
 import { AppHeader } from '../../src/ui/AppHeader';
 import { DesktopStatus } from '../../src/ui/DesktopStatus';
+import { DesktopUpdates } from '../../src/ui/DesktopUpdates';
 import { SupportPage } from '../../src/support/SupportPage';
 import { Footer } from '../../src/ui/Footer';
 import { useDesktopState } from '../../src/ui/useDesktopState';
@@ -75,62 +76,64 @@ test('Strict Mode keeps one subscription and ignores late snapshots and unmounte
     source.emit('after unmount');
 });
 
-test('status components render nothing while loading and recover independently', async () => {
+test('ready updates require a choice, Later can reopen, and late snapshots cannot hide them', async () => {
     const initial = deferred<any>();
     const updates = stateSource(initial.promise);
     const connection = stateSource({ connected: true, message: '' });
     setApi({
-        getBetaNotice: async () => null,
+        getVersion: async () => '1.12.0-beta1',
         getUpdateState: updates.get,
         onUpdateState: updates.subscribe,
         getConnectionState: connection.get,
         onConnectionState: connection.subscribe,
     });
-    render(
-        <StrictMode>
-            <DesktopStatus />
-        </StrictMode>,
-    );
-    await act(async () => {});
+    render(<StrictMode><DesktopStatus /><DesktopUpdates /></StrictMode>);
+    await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta1')));
     assert.equal(screen.queryByRole('button'), null);
 
     connection.emit({ connected: false, message: 'Connection lost' });
     assert.ok(screen.getByRole('button', { name: 'Reload page' }));
-    updates.emit({ status: 'ready', version: '1.12.0', message: 'Update ready.' });
-    assert.ok(screen.getByRole('button', { name: 'Install and restart' }));
+    updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
+    const dialog = screen.getByRole('alertdialog') as HTMLDialogElement;
+    assert.equal(dialog.open, true);
+    assert.equal(document.activeElement, screen.getByRole('button', { name: 'Restart later' }));
+    assert.equal(fireEvent.keyDown(document.activeElement!, { key: 'Escape' }), false);
+    assert.equal(fireEvent(dialog, new window.Event('cancel', { cancelable: true })), false);
+    fireEvent.click(dialog);
+    assert.equal(dialog.open, true);
+    assert.equal(screen.queryByRole('button', { name: 'Close' }), null);
     await act(async () => initial.resolve({ status: 'disabled', message: '' }));
-    assert.ok(screen.getByRole('button', { name: 'Install and restart' }));
+    assert.ok(screen.getByRole('button', { name: 'Restart now' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Later' }));
-    assert.equal(sessionStorage.getItem('deferred-update'), '1.12.0');
-    connection.emit({ connected: true, message: '' });
-    assert.equal(screen.queryByRole('button'), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
+    assert.equal(sessionStorage.getItem('deferred-update'), '1.12.0-beta2');
+    assert.equal(screen.queryByRole('alertdialog'), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Update ready' }));
+    assert.ok(screen.getByRole('alertdialog'));
+    fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
+
+    // The same ready event stays dismissed; a different version asks again.
+    updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
+    assert.equal(screen.queryByRole('alertdialog'), null);
+    updates.emit({ status: 'ready', version: '1.12.0-beta3', message: 'Update ready.' });
+    assert.ok(screen.getByRole('alertdialog'));
 });
 
-test('background checks stay quiet while Config offers a manual check', async () => {
+test('automatic checks, downloads and connection failures leave only the current version visible', async () => {
     const updates = stateSource<any>({ status: 'idle', message: 'Up to date.' });
-    const connection = stateSource({ connected: true, message: '' });
-    let checks = 0;
     setApi({
-        getBetaNotice: async () => null,
+        getVersion: async () => '1.12.0-beta1',
         getUpdateState: updates.get,
         onUpdateState: updates.subscribe,
-        getConnectionState: connection.get,
-        onConnectionState: connection.subscribe,
-        checkDesktopUpdate: async () => {
-            checks++;
-        },
     });
-    const view = render(<DesktopStatus />);
-    await act(async () => {});
-    assert.equal(screen.queryByRole('button'), null);
-    updates.emit({ status: 'checking', message: 'Checking…' });
-    assert.equal(screen.queryByRole('button'), null);
-    updates.emit({ status: 'idle', message: 'Up to date.' });
-
-    view.rerender(<DesktopStatus allowManualCheck />);
-    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }));
-    await waitFor(() => assert.equal(checks, 1));
+    render(<DesktopUpdates />);
+    await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta1')));
+    for (const status of ['checking', 'downloading', 'error', 'idle', 'disabled']) {
+        updates.emit({ status, message: 'Background updater status', percent: 50 });
+        assert.equal(screen.queryByRole('button'), null);
+        assert.equal(screen.queryByRole('alertdialog'), null);
+        assert.equal(screen.queryByText('Background updater status'), null);
+    }
 });
 
 test('header navigates inside React and updates the active link', async () => {
@@ -271,25 +274,32 @@ test('the footer shows the current year and cleans up its refresh timer in Stric
     }
 });
 
-test('a recovered updater replaces an earlier manual-action error', async () => {
-    const updates = stateSource<any>({ status: 'idle', message: '' });
-    const connection = stateSource({ connected: true, message: '' });
+test('restart stays guarded while pending and can recover from blocked or failed installation', async () => {
+    const updates = stateSource<any>({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
+    const response = deferred<any>();
+    let installs = 0;
     setApi({
-        getBetaNotice: async () => null,
+        getVersion: async () => '1.12.0-beta1',
         getUpdateState: updates.get,
         onUpdateState: updates.subscribe,
-        getConnectionState: connection.get,
-        onConnectionState: connection.subscribe,
-        checkDesktopUpdate: async () => {
-            throw new Error('IPC failed');
-        },
+        installDesktopUpdate: async () => { installs++; return response.promise; },
     });
-    render(<DesktopStatus allowManualCheck />);
-    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Check for updates' })));
-    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }));
-    await waitFor(() =>
-        assert.match(screen.getByRole('status').textContent || '', /Could not check/),
-    );
-    updates.emit({ status: 'downloading', message: 'Downloading update…', percent: 50 });
-    assert.equal(screen.getByRole('status').textContent, 'Downloading update… 50%');
+    render(<DesktopUpdates />);
+    await waitFor(() => assert.ok(screen.getByRole('alertdialog')));
+    fireEvent.click(screen.getByRole('button', { name: 'Restart now' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Restart now' }));
+    assert.equal(installs, 1);
+    assert.equal((screen.getByRole('button', { name: 'Restart later' }) as HTMLButtonElement).disabled, true);
+
+    updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Finish playing and wait for score uploads before restarting.' });
+    await act(async () => response.resolve(updates.get()));
+    assert.match(screen.getByRole('status').textContent || '', /Finish playing/);
+    assert.equal((screen.getByRole('button', { name: 'Restart later' }) as HTMLButtonElement).disabled, false);
+
+    window.api.installDesktopUpdate = async () => { throw new Error('IPC failed'); };
+    fireEvent.click(screen.getByRole('button', { name: 'Restart now' }));
+    await waitFor(() => assert.match(screen.getByRole('status').textContent || '', /Could not restart/));
+    assert.ok(screen.getByRole('alertdialog'));
+    fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
+    assert.equal(screen.queryByRole('alertdialog'), null);
 });
