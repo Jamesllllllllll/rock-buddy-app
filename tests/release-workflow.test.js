@@ -6,8 +6,11 @@ const { execFileSync } = require('node:child_process');
 
 test('push CI cannot package, upload, or publish a release', () => {
     const workflow = yaml.load(fs.readFileSync('.github/workflows/build.yml','utf8'));
+    assert.deepEqual(workflow.on.push, { branches: ['main', 'develop'] });
+    assert.ok(Object.hasOwn(workflow.on, 'pull_request'));
     assert.deepEqual(workflow.permissions, {contents:'read'});
     assert.equal(workflow.on.workflow_dispatch.inputs.installer.default,'none');
+    assert.equal(workflow.concurrency['cancel-in-progress'], "${{ github.event_name != 'workflow_dispatch' }}");
     for (const job of Object.values(workflow.jobs)) {
         for (const step of job.steps) {
             if (/package:|electron-builder|upload-artifact|dotnet publish|prepare-installer|check-installer|smoke-staging-installer/.test(step.run || step.uses || '')) {

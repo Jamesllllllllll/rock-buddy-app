@@ -4,6 +4,9 @@ Preserve existing desktop behavior while testing the TypeScript backend migratio
 Multiplayer work is on hold; experimental reader support is not a request to add
 multiplayer UI or score submission. Read `docs/desktop-release.md` for the current acceptance checklist.
 Ordinary pushes must never package or publish installers. Releases remain manual.
+Automatic checks run on PRs and pushes to main/develop only. If upstream PR checks
+await approval, use an explicit manual run with installer=none; do not add a second
+automatic feature-branch build. Historical test branches do not publish releases.
 
 ## React renderer
 

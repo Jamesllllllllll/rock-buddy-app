@@ -80,7 +80,8 @@ Do not promise silent installation or automatic restarts.
 
 ## Builds and storage
 
-Pushes and pull requests run tests and the Windows compile only. They do not
+Pull requests and pushes to `main`/`develop` run tests and the Windows compile only.
+Feature-branch pushes do not also run checks in the fork. These checks do not
 package an installer, upload an artifact, create a tag, or publish a release.
 The Build workflow has read-only repository permissions.
 
@@ -91,9 +92,27 @@ runner, validates update-file checksums, and uploads one artifact retained for
 seven days. Production packaging is also manual and requires a stable version.
 Nothing publishes automatically, even after a merge.
 
-Old branches still contain their original workflows: pushing `feat/community-beta`
-or `feat/staging-backend` can still package installers. Use this branch for new work.
-Do not remove existing releases or overwrite other branches during preparation.
+The fork's old `feat/community-beta`, `feat/staging-backend`, and `prep/*` branches
+retain manual checks only. The two `test/public-1.11.0-*` compatibility branches
+retain their source, but their workflows only explain where to build the maintained
+Beta. Their old automatic packaging/publication jobs are retired. Existing releases
+and update-feed assets are retained. Use this branch for new desktop builds.
+
+Upstream fork PR runs may need a maintainer's approval. TNT can open the PR's
+Conversation tab and choose **Approve and run workflows** for the current commit.
+Approval runs checks; it does not merge the PR or publish an installer. Until that
+run is approved, explicitly run checks in the fork with:
+
+```sh
+gh workflow run build.yml --repo Jamesllllllllll/rock-buddy-app \\
+  --ref feat/desktop-release-prep -f installer=none
+```
+
+Do not run that fallback when the upstream check is already running. The fork's
+default branch still lacks the manual trigger, so use the CLI when GitHub does not
+show Run workflow. For ongoing approvals, TNT can keep approving outside-contributor
+runs or grant the contributor Write access if appropriate; no broader workflow
+token permissions or access to secrets is needed for these checks.
 
 GitHub Release assets and Actions artifacts are different storage categories.
 Temporary Actions downloads expire; files deliberately attached to a release stay

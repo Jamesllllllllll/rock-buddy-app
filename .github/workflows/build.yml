@@ -1,6 +1,8 @@
 name: Build
 on:
+  # Feature branches are checked by their PR, not again by a fork push.
   push:
+    branches: [main, develop]
   pull_request:
   workflow_dispatch:
     inputs:
