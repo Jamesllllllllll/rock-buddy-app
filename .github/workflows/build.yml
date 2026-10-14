@@ -1,7 +1,13 @@
 name: Build
-on: [push, pull_request, workflow_dispatch]
+on:
+  workflow_dispatch:
 permissions:
   contents: read
+
+# Historical branches retain explicit checks, not automatic installers or releases.
+concurrency:
+  group: historical-checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_on_win:
@@ -25,86 +31,3 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - name: Publish self-contained RockSniffer for beta
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-        run: dotnet publish RockSniffer/RockSniffer/RockSniffer.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:LangVersion=12.0 -o .generated/rocksniffer-beta
-      # The legacy NSIS 3.0.4.1 System.dll intermittently crashes on fresh installs.
-      # Pin the maintained upstream bundle without upgrading the app dependencies.
-      - name: Prepare NSIS 3.12
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-        shell: pwsh
-        run: |
-          $root = Join-Path $env:RUNNER_TEMP 'rock-buddy-nsis'
-          New-Item -ItemType Directory -Path $root -Force | Out-Null
-          $archive = Join-Path $root 'bundle.tar.gz'
-          Invoke-WebRequest 'https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis%402.0.1/nsis-bundle-3.12.tar.gz' -OutFile $archive
-          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'fe36a357f3a220db893498e830fd80e0769768a18a99f4e4d2447b982538feed') { throw 'NSIS checksum mismatch' }
-          tar -xzf $archive -C $root
-          if ($LASTEXITCODE -ne 0) { throw 'NSIS extraction failed' }
-          $nsis = Join-Path $root 'nsis-bundle/windows'
-          # electron-builder 26 expects the compiler in Bin rather than the bundle root.
-          Copy-Item "$nsis/makensis.exe" "$nsis/Bin/makensis.exe"
-          Copy-Item "$root/nsis-bundle/elevate.exe" "$nsis/elevate.exe"
-          "ELECTRON_BUILDER_NSIS_DIR=$nsis" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Package beta installer
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-        run: npm run package:beta
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Install and smoke-test the packaged app
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-        run: node tooling/smoke-staging-installer.cjs --beta
-      - name: Checksum beta installer
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-        shell: pwsh
-        run: |
-          Get-ChildItem release/beta/*-Setup.exe | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)"
-          } | Set-Content release/beta/SHA256SUMS.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-        with:
-          name: rock-buddy-beta-windows
-          path: |
-            release/beta/*-Setup.exe
-            release/beta/SHA256SUMS.txt
-            release/beta/beta-login.png
-          if-no-files-found: error
-          retention-days: 14
-
-  publish-beta:
-    needs: build_on_win
-    if: github.repository == 'Jamesllllllllll/rock-buddy-app' && github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/community-beta'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      BETA_TAG: beta-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: rock-buddy-beta-windows
-          path: installer
-      - name: Prepare draft beta prerelease
-        run: |
-          cat > notes.md <<'NOTES'
-          Download and run **Rock-Buddy-Beta-…-Setup.exe**, then open **Rock Buddy Beta** from the Start menu or desktop shortcut. No ZIP, script, developer tools, or separate .NET install is needed.
-
-          **This is a temporary community test. Scores and account changes made in Beta will be discarded after testing and will not transfer to the live Rock Buddy service.** Rocksmith still saves your local game progress normally.
-
-          The beta starts with the July 11, 2026 database snapshot. Use the Rock Buddy username/email and password you had then, or create a beta account. Newer accounts and password changes are not in that snapshot. A beta password reset affects only Beta.
-
-          Beta installs separately and keeps its own login and settings. Close normal Rock Buddy and other RockSniffer instances before opening Beta. Select your own Steam/Rocksmith profile and confirm the profile link when asked.
-
-          Please try login, search, profiles, rankings, Learn a Song, Score Attack, and restarting after a score upload. Report the beta version, song, arrangement, approximate play time, and what happened to TNT or Jimmy. Do not share passwords or login tokens.
-
-          To return to the live service, close Beta and open normal Rock Buddy. Uninstall **Rock Buddy Beta** when testing ends. The normal app and its settings stay installed.
-
-          Windows CI installs and launches the actual installer and checks its beta label, backend selection, bundled runtime, and separation from production settings. Real gameplay still needs community testing. This build is unsigned; Windows may show an unknown-publisher warning. Automatic updates are not enabled.
-          NOTES
-          gh release create "$BETA_TAG" installer/*-Setup.exe installer/SHA256SUMS.txt \
-            --target "$GITHUB_SHA" --title "Rock Buddy Beta — build $GITHUB_RUN_NUMBER" \
-            --notes-file notes.md --prerelease --draft --latest=false
