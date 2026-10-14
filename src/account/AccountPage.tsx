@@ -1,0 +1,83 @@
+import { Link } from 'react-router-dom';
+import { request } from '../ui/api';
+import { useAuth, useSession } from '../ui/Session';
+import { useResource } from '../ui/useResource';
+import { AsyncState } from '../ui/AsyncState';
+import { useAction } from '../ui/useAction';
+
+export function AccountPage() {
+    const auth = useAuth();
+    const { logout } = useSession();
+    const action = useAction();
+    const account = useResource(`account:${auth.user_id}`, () =>
+        request('account/get_account_info', auth),
+    );
+
+    return (
+        <main>
+            <h1>Account</h1>
+            <AsyncState {...account} retry={account.reload} />
+            {account.data && (
+                <div className="account-fields">
+                    <p>
+                        Username: <span>{account.data.username}</span>{' '}
+                        <Link to="/account/username">Change</Link>
+                    </p>
+                    <p>
+                        Email: <span>{account.data.email}</span>{' '}
+                        <Link to="/account/email">Change</Link>
+                    </p>
+                    <p>
+                        Password: <span>******</span> <Link to="/account/password">Change</Link>
+                    </p>
+                </div>
+            )}
+            <button
+                className="btn-primary"
+                disabled={action.pending}
+                onClick={() => void action.run(logout)}
+            >
+                Logout
+            </button>
+            <AsyncState error={action.error} />
+        </main>
+    );
+}
+
+export function ActivationPage() {
+    const auth = useAuth();
+    const { refresh, logout } = useSession();
+    const action = useAction();
+    const account = useResource(`activation:${auth.user_id}`, () =>
+        request('account/get_account_info', auth),
+    );
+
+    return (
+        <main className="center-page">
+            <h1>Activate your account</h1>
+            <AsyncState {...account} retry={account.reload} />
+            {account.data && <p>Check {account.data.email} for your activation link.</p>}
+            <button
+                disabled={action.pending}
+                onClick={() =>
+                    void action.run(async () => {
+                        await request('account/send_activation_email', auth);
+                        window.api.info('Email sent.');
+                    })
+                }
+            >
+                Send activation email
+            </button>
+            <p>
+                <Link to="/account/email">Change email</Link>
+            </p>
+            <button disabled={action.pending} onClick={() => void action.run(refresh)}>
+                I've activated my account
+            </button>
+            <button disabled={action.pending} onClick={() => void action.run(logout)}>
+                Logout
+            </button>
+            <AsyncState error={action.error} />
+        </main>
+    );
+}

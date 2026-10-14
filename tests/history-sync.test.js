@@ -10,14 +10,12 @@ test('declining history imports still syncs the catalog and records a new verifi
         api: { getHost: async () => 'https://example.invalid', error: message => assert.fail(message),
             getFileTimestamp: () => assert.fail('declined save must not be inspected'),
             readRocksmithData: () => assert.fail('declined save must not be read') } };
-    const element = () => ({ appendChild() {}, style: {} });
     const load = file => {
         const exports = {};
         const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
             compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
         }).outputText;
         vm.runInNewContext(source, { exports, window,
-            document: { getElementById: element, createElement: element },
             require: () => ({ logMessage() {},
                 getAvailablePaths: arrangements => arrangements.map(a => ({ hash: a.arrangementID, name: 'Lead' })),
                 post: async (url, body) => { sent.push({ url, body }); return { success: true }; } }),
@@ -27,7 +25,7 @@ test('declining history imports still syncs the catalog and records a new verifi
     const { Rocksmith } = load('src/sniffer/rocksmith.ts');
     const { Sniffer } = load('src/sniffer/sniffer.ts');
     const rocksmith = new Rocksmith('friend_PRFLDB', false);
-    const sniffer = new Sniffer(rocksmith, {}, {});
+    const sniffer = new Sniffer(rocksmith, {}, {}, { user_id: 101, api_key: 'test' });
     sniffer.showLeaderboard = async () => {};
     const data = { songDetails: { songID: 'song', psarcFileHash: 'file', songName: 'Song', artistName: 'Artist',
         albumName: 'Album', albumYear: 2026, toolkit: { author: 'Author', version: '1' },

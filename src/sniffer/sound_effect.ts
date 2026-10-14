@@ -35,7 +35,7 @@ export class SoundEffect {
         else if (type === 'oof') {
             const sound = new Audio(await window.api.pathJoin(srcdir, '../media/oof.mp3'));
             sound.preload = 'auto';
-            sounds.push();
+            sounds.push(sound);
         }
         else if (type === 'oof2') {
             const sound = new Audio(await window.api.pathJoin(srcdir, '../media/oof2.wav'));
@@ -88,6 +88,7 @@ export class SoundEffect {
     
     disable() {
         for (let sound of this._sounds) {
+            sound.pause();
             sound.remove();
         }
 

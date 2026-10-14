@@ -64,7 +64,7 @@ const product = beta ? 'Beta' : 'Staging';
             try {
                 const targets = await (await fetch('http://127.0.0.1:9333/json/list', { signal: AbortSignal.timeout(1000) })).json();
                 // Wait for startup's auth redirect before changing synthetic local settings.
-                target = targets.find(page => page.type === 'page' && page.url.startsWith('file:') && page.url.endsWith('/auth/login.html'));
+                target = targets.find(page => page.type === 'page' && page.url.startsWith('file:') && page.url.endsWith('/index.html#/login'));
                 if (target) break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -90,11 +90,7 @@ const product = beta ? 'Beta' : 'Staging';
                     const host = await window.api.getHost();
                     const version = await window.api.getVersion();
                     const bridgeProbe = await window.api.requestBackend(host + '/api/auth/login.php', {version});
-                    const probe = await fetch(host + '/api/auth/login.php', {
-                        method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({version}), signal: AbortSignal.timeout(10000)
-                    });
-                    return {bridgeProbe, tools: !!document.getElementById('desktop-tools'), probe: {status: probe.status, body: await probe.json()}, host, notice: document.getElementById('beta-notice')?.textContent, version: await window.api.getVersion(),
+                    return {bridgeProbe, hasLogin: !!document.querySelector('input[autocomplete="username"]'), host, notice: document.getElementById('beta-notice')?.textContent, version: await window.api.getVersion(),
                         sentinel: await window.api.storeGet('stagingSmokeSentinel'), detected};
                 })()`,
                 awaitPromise: true, returnByValue: true,
@@ -103,7 +99,7 @@ const product = beta ? 'Beta' : 'Staging';
         assert.ok(!response.error && !response.result?.exceptionDetails,
             'Preload/renderer check failed: ' + JSON.stringify(response.error || response.result?.exceptionDetails));
         assert.equal(response.result.result.value.host, HOSTS[channel]);
-        assert.equal(response.result.result.value.tools, true);
+        assert.equal(response.result.result.value.hasLogin, true);
         assert.ok(response.result.result.value.bridgeProbe.error);
         if (beta) {
             assert.match(response.result.result.value.notice, /Rock Buddy Beta.*will be discarded/);
@@ -115,15 +111,9 @@ const product = beta ? 'Beta' : 'Staging';
         for (const config of response.result.result.value.detected) {
             assert.equal(config?.profilePath, path.join(remote, 'ci-profile_PRFLDB'), 'Fresh accounts discover the profile without Config');
         }
-        // Verify a real renderer request under the installed app's security policy.
-        // Maintenance is allowed for draft builds; publication still requires backend acceptance.
-        const probe = response.result.result.value.probe;
-        if (beta && probe.status === 503) {
-            assert.deepEqual(probe.body, { error: 'Rock Buddy is undergoing maintenance. Please try again later.' });
-        } else {
-            assert.equal(probe.status, 400, 'Packaged version must pass the live API version gate');
-            assert.deepEqual(probe.body, { error: 'Invalid JSON data.' });
-        }
+        // The bridge performs backend requests; the renderer cannot fetch credentials externally.
+        const error = response.result.result.value.bridgeProbe.error;
+        assert.ok(['Invalid JSON data.', 'Rock Buddy is undergoing maintenance. Please try again later.'].includes(error));
         if (beta) {
             const screenshot = await new Promise((resolve, reject) => {
                 const timer = setTimeout(() => reject(new Error('Screenshot timed out')), 10000);

@@ -20,7 +20,7 @@ module.exports = {
         rockBuddyBackend: target,
     },
     directories: { output: `release/${target}` },
-    files: ['src/**/*', 'dist/**/*', 'images/**/*', 'package.json'],
+    files: ['src/**/*', 'dist/**/*', 'images/**/*', 'media/**/*', 'package.json'],
     extraFiles: [
         { from: '.generated/rocksniffer-release', to: 'RockSniffer' },
         ...base.extraFiles.slice(1),

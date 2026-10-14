@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, screen } = require('electron');
 const Store = require('electron-store').default;
 const aesjs = require('aes-js');
 const http = require('http');
@@ -14,7 +14,10 @@ const { approveProfileImport } = require('./profile-import');
 const profileImportDecisions = new Map();
 const { createBackendClient, CONNECTION_MESSAGE } = require('./backend-client');
 const { createDesktopUpdates, updatesEnabled } = require('./desktop-updates');
-const { supportUrl } = require('./support-link');
+const { createSupportCheckout } = require('./support-checkout');
+const { restoreWindowState, trackWindowState } = require('./window-state');
+const { pathToFileURL } = require('node:url');
+let supportCheckout = null;
 let desktopUpdates = null;
 let playing = false;
 let lastGameplayReport = 0;
@@ -285,15 +288,29 @@ function createWindow() {
         }
     }
 
+    // Use the old account dimensions once if this installation has no saved window state yet.
+    const windowState = restoreWindowState(
+        store.get('window_state') ?? { width: screenWidth, height: screenHeight },
+        screen,
+    );
+    const { x, y, width, height } = windowState;
     const win = new BrowserWindow({
-        width: screenWidth,
-        height: screenHeight,
+        x, y, width, height,
+        show: false,
         webPreferences: {
             preload: path.join(__dirname, '..', 'dist', 'preload.js'),
             backgroundThrottling: false,
             ...backend.webPreferences
         },
         icon: path.join(__dirname, '..', 'images', 'favicon.ico')
+    });
+
+    trackWindowState(win, store, screen, windowState);
+    win.once('ready-to-show', () => {
+        if (windowState.maximized) {
+            win.maximize();
+        }
+        win.show();
     });
 
     // Keep every page visibly labeled, including login and account screens.
@@ -305,16 +322,6 @@ function createWindow() {
             win.setTitle(title);
         });
     }
-
-    let resizeTimer;
-    win.on('resize', () => {
-        const { width, height } = win.getBounds();
-
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => {
-            win.webContents.send('window-resized', width, height);
-        }, 500);
-    });
 
     // Hide the menu bar
     win.setMenuBarVisibility(false);
@@ -508,21 +515,6 @@ function createWindow() {
             message: message,
             buttons: ['OK']
         });
-    });
-
-    ipcMain.handle('get-window-size', (event) => {
-        return win.getBounds();
-    });
-
-    ipcMain.on('set-window-size', (event, width, height) => {
-        win.setBounds({
-            width: parseInt(width),
-            height: parseInt(height)
-        });
-    });
-
-    ipcMain.on('load-url', (event, url) => {
-        win.loadURL(url);
     });
 
     ipcMain.on('open-external-link', (event, url) => {
@@ -810,7 +802,24 @@ ipcMain.handle('get-connection-state', () => backendClient.getState());
 ipcMain.handle('get-update-state', () => desktopUpdates?.getState() || { status: 'disabled', message: 'Updates are available in installed Windows builds.' });
 ipcMain.handle('check-desktop-update', () => desktopUpdates?.check());
 ipcMain.handle('install-desktop-update', () => desktopUpdates?.install());
-ipcMain.handle('open-support', () => shell.openExternal(supportUrl(host, HOSTS)));
+// Checkout is available only to the bundled app's Support route.
+const appPage = pathToFileURL(path.join(__dirname, 'index.html')).href;
+let supportSession = null;
+function supportClient(event, session) {
+    const sender = new URL(event.senderFrame?.url || 'about:blank');
+    if (sender.hash !== '#/support' || sender.href.split('#')[0] !== appPage) {
+        throw new Error('Open the Support page first.');
+    }
+    if (session && session !== supportSession) {
+        supportSession = session;
+        supportCheckout = null;
+    }
+    supportCheckout ??= createSupportCheckout(host, HOSTS, { openExternal: url => shell.openExternal(url) });
+    return supportCheckout;
+}
+ipcMain.handle('support-info', (event, session) => supportClient(event, session).info());
+ipcMain.handle('support-checkout', (event, input) => supportClient(event).start(input));
+ipcMain.handle('support-manage', event => supportClient(event).manage());
 ipcMain.on('gameplay-state', (_event, active) => {
     playing = active === true;
     lastGameplayReport = Date.now();

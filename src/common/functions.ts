@@ -1,6 +1,3 @@
-import { UserData } from "./user_data";
-
-var connected = true;
 
 export function logMessage(message: any) {
     console.log(message);
@@ -280,25 +277,11 @@ export async function post(url: string, data: any) {
 
     // Only an explicit authentication rejection ends the session; connection loss does not.
     if (response.error === 'Invalid API key.') {
-        window.api.error('Please log back in to verify your identity.');
-        window.location.href = new URL('../auth/logout.html', window.location.href).href;
+        const submitted = data.auth_data || data;
+        const current = JSON.parse(sessionStorage.getItem('auth_data') || 'null');
+        if (current && JSON.stringify(submitted) === JSON.stringify(current)) {
+            window.dispatchEvent(new Event('session-expired'));
+        }
     }
     return response;
-}
-
-// If "Always Sniff" is enabled and Rock Buddy loses focus, jump to the sniffer page
-export async function checkAlwaysSniff(): Promise<void> {
-    
-    let alwaysSniff = await UserData.get('always_sniff');
-    if (alwaysSniff === null || alwaysSniff === false) {
-        return;
-    }
-
-    // Jump to the sniffer page if Rock Buddy loses focus
-    setInterval(async () => {
-        if (!document.hasFocus()) {
-            const srcDir = await window.api.getSrcDir();
-            window.location.href = await window.api.pathJoin(srcDir, 'sniffer/sniffer.html');
-        }
-    }, 100);
 }

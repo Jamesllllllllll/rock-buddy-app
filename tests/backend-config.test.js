@@ -30,11 +30,12 @@ test('ambiguous and unsafe selectors fail before storage is opened', () => {
         ['file:///tmp/x'], ['https://user:secret@example.invalid'], ['https://example.invalid/api'],
         ['https://example.invalid?token=secret']]) assert.throws(() => resolveBackend(args));
 });
-test('CSP permits the named backends without allowing every HTTPS origin', () => {
+test('the renderer permits configurable HTTP readers while backend credentials use the bridge', () => {
     const html = readFileSync('src/index.html', 'utf8');
     const connect = html.match(/connect-src ([^;]+);/)[1].split(' ');
-    for (const host of Object.values(HOSTS)) assert.ok(connect.includes(host));
+    assert.ok(connect.includes('http:'));
     assert.ok(!connect.includes('*') && !connect.includes('https:'));
+    assert.ok(html.includes("script-src 'self';"));
 });
 
 test('staging installers select staging without flags and reject backend overrides', () => {

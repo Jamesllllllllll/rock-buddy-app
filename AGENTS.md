@@ -5,6 +5,32 @@ Multiplayer work is on hold; experimental reader support is not a request to add
 multiplayer UI or score submission. Read `docs/desktop-release.md` for the current acceptance checklist.
 Ordinary pushes must never package or publish installers. Releases remain manual.
 
+## React renderer
+
+- `src/index.html` and `src/ui/main.tsx` are the only HTML entry and React root.
+  Use React Router links and routes; never load another HTML page for navigation.
+- React owns screen content, shared navigation, dialogs, status notices, and forms.
+  Do not inject HTML, attach DOM controllers, or build fake DOM adapters.
+- `SessionProvider` owns authentication. Capture account credentials in services;
+  never read another account's settings or submit after logout.
+- `GameplayProvider` owns one Sniffer engine for the signed-in session. The engine
+  publishes snapshots through `useSyncExternalStore` and has no DOM dependency.
+  Navigation preserves it; Config and logout stop it before changing profiles.
+- Use effects for subscriptions, reads, and timers with cleanup and stale-response
+  handling. `useResource` keys must include every value that changes the request.
+  User writes, checkout, and installation belong in explicit actions.
+- Page reads use TanStack Query through `useResource`, with an in-memory cache owned
+  by the login session. Keep cached content visible during refreshes, invalidate it
+  after writes, and never reuse another account's or selection's data. Search UI
+  state lives separately from the query cache. Do not cache payment authorization.
+- Keep Electron access in the typed preload bridge. Pass event data without the
+  Electron event object and return unsubscribe functions for subscriptions.
+- Preserve appearance and gameplay verification rules. Use descriptive names,
+  blank lines between logical blocks, and simple comments for non-obvious logic.
+- `npm test` includes real React component tests. `build:renderer` works on Linux;
+  native reader builds and installed gameplay still need Windows. Both development
+  and production renderer builds clear only generated `dist/` output first.
+
 ## System requirements
 
 - Assume **nothing is installed**, including Git, Node, npm, Python, .NET, or a

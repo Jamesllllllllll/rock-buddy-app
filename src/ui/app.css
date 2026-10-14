@@ -1,0 +1,268 @@
+/* Shared layout keeps every route inside the same document. */
+body {
+    margin: 0;
+    min-width: 400px;
+    background: #18181b;
+    color: white;
+}
+.app-shell {
+    min-height: 100vh;
+    padding: 8px 8px 64px;
+}
+.navtop {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+}
+.navtop a[aria-current="page"] {
+    text-decoration: none;
+    font-weight: bold;
+}
+main {
+    padding-bottom: 24px;
+}
+.page-loading-indicator {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 3px;
+    background: #a26ede;
+    z-index: 2000;
+    pointer-events: none;
+}
+.page-placeholder {
+    padding: 16px 0;
+    color: inherit;
+}
+.placeholder-line {
+    height: 16px;
+    max-width: 640px;
+    margin-top: 16px;
+    background: currentColor;
+    opacity: 0.1;
+    border-radius: 3px;
+}
+.placeholder-line:last-child {
+    max-width: 420px;
+}
+.page-heading,
+.song-info,
+.score-toolbar,
+.live-heading,
+.live-values {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.page-heading > :last-child,
+.score-toolbar > :last-child {
+    margin-left: auto;
+}
+.song-info h2 {
+    margin: 0;
+}
+.song-info p {
+    margin: 5px 0;
+}
+.live-data {
+    margin: 16px 0;
+}
+.live-values {
+    justify-content: space-between;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.score-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+.score-toolbar {
+    flex-wrap: wrap;
+}
+.score-badge {
+    width: 15px;
+    height: 15px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+.verification-badge {
+    height: 25px;
+}
+.text-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid #a26ede;
+    outline-offset: 2px;
+}
+fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+.auth-page {
+    width: 320px;
+    margin: 55px auto;
+    text-align: center;
+}
+.auth-page input {
+    width: 100%;
+    padding: 10px;
+}
+.auth-page fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.rockbuddy {
+    max-width: 200px;
+    margin-top: 20px;
+}
+.center-page {
+    margin: 40px auto;
+    text-align: center;
+}
+.account-fields p {
+    display: flex;
+    gap: 16px;
+}
+.account-fields span {
+    min-width: 180px;
+}
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 48px;
+}
+.stats-entry {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    margin: 8px 0;
+    min-width: 180px;
+}
+.capitalize {
+    text-transform: capitalize;
+}
+.app-dialog {
+    color: inherit;
+    background: #18181b;
+    border: 1px solid #50415f;
+    border-radius: 8px;
+    width: min(1000px, 95vw);
+    max-height: 90vh;
+    padding: 24px;
+}
+.app-dialog::backdrop {
+    background: rgb(0 0 0 / 0.8);
+}
+.app-dialog .close {
+    background: none;
+    border: 0;
+}
+.rank-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.rank-grid section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.rank-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+}
+.rank-card p {
+    margin: 5px 0;
+    font-size: 13px;
+}
+.king {
+    width: fit-content;
+}
+.rank-card img {
+    max-height: 80px;
+}
+.config-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 10px 0;
+}
+.config-row > strong {
+    min-width: 200px;
+}
+.config-row input {
+    width: 100px;
+    margin: 0;
+}
+.checkbox-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 16px 8px 0;
+}
+.checkbox-row input {
+    width: 16px;
+    margin: 0;
+}
+.theme-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.theme-controls input {
+    width: 40px;
+}
+.team-link {
+    position: fixed;
+    bottom: 10px;
+    right: 12px;
+    z-index: 1000;
+}
+table {
+    font-family: "Roboto Mono", monospace;
+}
+.column-options {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0;
+}
+.column-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+td,
+th {
+    padding: 5px;
+    text-align: left;
+}
+.search-results tbody tr {
+    cursor: pointer;
+}
+.list-team-members li a:hover {
+    transform: none;
+}
+[role="alert"] {
+    color: #ffb5b5;
+}

@@ -10,12 +10,7 @@ function loadSniffer() {
     const source = ts.transpileModule(fs.readFileSync('src/sniffer/sniffer.ts','utf8'), {
         compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022},
     }).outputText;
-    const elements = new Map();
-    const document = {getElementById: id => {
-        if (!elements.has(id)) elements.set(id,{style:{},appendChild(){}});
-        return elements.get(id);
-    }};
-    vm.runInNewContext(source, {exports,Date,document,
+    vm.runInNewContext(source, {exports,Date,clearInterval,
         window:{sessionStorage:{getItem:()=>'{"user_id":1}'},api:{setGameplayActive(){}}},
         require:()=>({logMessage(){},showExclusive(){},showError:error=>assert.fail(String(error))}),
     });
@@ -24,7 +19,7 @@ function loadSniffer() {
 
 test('slow backend sync does not block local gameplay updates or launch overlapping syncs', async () => {
     const Sniffer=loadSniffer();
-    const sniffer=new Sniffer({}, {}, {enabled:()=>false});
+    const sniffer=new Sniffer({}, {}, {enabled:()=>false,disable(){}}, {user_id:1});
     const data={songDetails:{songID:'one'},memoryReadout:{songTimer:30}};
     let syncs=0, live=0, progress=0, finish;
     sniffer.sniff=async()=>data;
@@ -45,7 +40,7 @@ test('slow backend sync does not block local gameplay updates or launch overlapp
 
 test('unexpected sync failures wait before retrying and leave the local loop usable', async () => {
     const Sniffer=loadSniffer();
-    const sniffer=new Sniffer({}, {}, {enabled:()=>false});
+    const sniffer=new Sniffer({}, {}, {enabled:()=>false,disable(){}}, {user_id:1});
     sniffer.sniff=async()=>({songDetails:{songID:'one'},memoryReadout:{songTimer:0}});
     sniffer.updatePath=()=>{};
     sniffer.updateSongInfo=()=>{};
@@ -59,4 +54,26 @@ test('unexpected sync failures wait before retrying and leave the local loop usa
     assert.equal(syncs,1);
     assert.ok(sniffer._retrySyncAt>Date.now());
     assert.equal(sniffer._refreshActive,false);
+});
+
+test('stopping the engine ignores a pending local read and prevents further polls', async () => {
+    const Sniffer = loadSniffer();
+    const sniffer = new Sniffer({}, {}, { enabled: () => false, disable() {} }, { user_id: 1 });
+    let finish;
+    let polls = 0;
+    sniffer.sniff = () => { polls++; return new Promise(resolve => { finish = resolve; }); };
+    sniffer.updatePath = () => assert.fail('A disposed engine must not process another frame');
+    const pending = sniffer.refresh();
+    sniffer.stop();
+    finish({ songDetails: { songID: 'one' }, memoryReadout: { songTimer: 10 } });
+    await pending;
+    await sniffer.refresh();
+    assert.equal(polls, 1);
+});
+
+test('an ended session cannot submit another score', async () => {
+    const Sniffer = loadSniffer();
+    const sniffer = new Sniffer({}, {}, { disable() {} }, { user_id: 1 });
+    sniffer.stop();
+    await assert.rejects(sniffer.send('https://example.invalid/api/data/sniffer_sync.php', {}), /session has ended/);
 });

@@ -1,4 +1,4 @@
-import { approxEqual, logMessage } from "../common/functions";
+import { logMessage } from "../common/functions";
 
 export class Rocksniffer {
     public static readonly timeout: number = 100; // milliseconds
@@ -40,9 +40,7 @@ export class Rocksniffer {
                 const version = data['Version'];
                 const versionRegex = /-buddy$/;
                 if (!await window.api.semverGte(version, Rocksniffer.requiredVersion) || !versionRegex.test(version)) {
-                    throw new Error("<p>Unsupported version of RockSniffer detected. Please close RockSniffer and use the version packaged with Rock Buddy.<br>"
-                                  + "<br>"
-                                  + "Note: Rock Buddy should start the correct version of RockSniffer automatically when it is started.</p>");
+                    throw new Error('Unsupported RockSniffer version. Close other RockSniffer instances and restart Rock Buddy to use its packaged reader.');
                 }
             }
             else {
@@ -74,15 +72,7 @@ export class Rocksniffer {
 
         // Give RockSniffer 1000ms to create the file (it creates it on first startup)
         if (!await window.api.waitForFile(addonConfigFile, 1000)) {
-            throw new Error("<p>Rocksniffer failed to create config/addons.json.<br>"
-                          + "<br>"
-                          + "This can happen if Rocksniffer fails to start. If this problem persists, try the following:<br>"
-                          + "<ul>"
-                          + "<li>Ensure <a href=\"https://dotnet.microsoft.com/en-us/download/dotnet/8.0/runtime\">.NET framework 8.0</a> (for console apps) is installed.</li>"
-                          + "<li>Try running Rock Buddy as administrator.</li>"
-                          + "</ul>"
-                          + "<br>"
-                          + "If these solutions do not resolve your issue, reach out to me in Discord. The link to my discord server can be found in the <a href=\"#\" onclick=\"openTwitchAboutPage()\">About</a> section on my twitch page.</p>");
+            throw new Error('RockSniffer could not start. Install the .NET 8 console runtime, then restart Rock Buddy.');
         }
 
         const addonConfig = JSON.parse(await window.api.readFile(addonConfigFile));
