@@ -115,6 +115,8 @@ The existing Beta app identity, installation directory, settings and session are
 preserved. Close normal Rock Buddy before gameplay. A source launch can use
 `npm run start:beta`; building/running RockSniffer requires native Windows x64.
 Local mode is available separately and does not contain the imported database.
+The navigation header shows a small Beta badge; hovering or focusing it reveals
+the reminder that test changes will be discarded.
 
 The Support header link opens a bundled desktop page with one-time/monthly choices and
 an amount in USD. Values below $5 disable checkout. No iframe or remote page is
@@ -193,6 +195,13 @@ in `Jamesllllllllll/rock-buddy-app`. This is not done by CI. Keep older installe
 assets available while updating the feed; upload the new files first and replace
 `beta.yml` last. No credentials are embedded in this public feed. An unpublished
 or missing feed produces a retryable update message, not a working update test.
+
+First seed that feed with the already installed `1.12.0-beta1` artifact, including
+its installer, blockmap and beta.yml. Checking from beta1 should then report that
+it is up to date. Actions artifacts alone are not an updater feed. Next, manually
+build `1.12.0-beta2` with the badge change and publish its files to the same feed,
+replacing beta.yml last. Leave beta1 installed on the test PC so its updater,
+rather than a manual installation of beta2, performs the upgrade.
 
 Test A → B on Windows before public release: install A manually, retain login and
 settings, publish the chosen higher B to the test feed, check/download B, choose

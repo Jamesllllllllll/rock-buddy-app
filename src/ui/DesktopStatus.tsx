@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useDesktopState } from './useDesktopState';
 import type { DesktopUpdateState } from './desktop-state';
 
@@ -8,30 +8,6 @@ const noticeStyle = {
     color: '#fff3d6',
     font: '14px/1.4 sans-serif',
 };
-
-// Show the test-data warning only when this build is a community beta.
-function BetaNotice() {
-    const [message, setMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        let mounted = true;
-        window.api
-            .getBetaNotice()
-            .then((notice) => {
-                if (mounted) setMessage(notice);
-            })
-            .catch(() => console.warn('Could not read the beta notice.'));
-        return () => {
-            mounted = false;
-        };
-    }, []);
-
-    return message ? (
-        <div id="beta-notice" role="note" style={noticeStyle}>
-            {message}
-        </div>
-    ) : null;
-}
 
 // Normal navigation stays quiet; Config keeps the manual update check available.
 function UpdateNotice({ allowManualCheck }: { allowManualCheck: boolean }) {
@@ -145,7 +121,6 @@ function ConnectionNotice() {
 export function DesktopStatus({ allowManualCheck = false }: { allowManualCheck?: boolean }) {
     return (
         <>
-            <BetaNotice />
             <UpdateNotice allowManualCheck={allowManualCheck} />
             <ConnectionNotice />
         </>

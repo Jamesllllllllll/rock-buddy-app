@@ -134,11 +134,15 @@ test('background checks stay quiet while Config offers a manual check', async ()
 });
 
 test('header navigates inside React and updates the active link', async () => {
+    setApi({ getBetaNotice: async () => 'Rock Buddy Beta: test changes will be discarded.' });
     render(
         <MemoryRouter initialEntries={['/search']}>
             <AppHeader />
         </MemoryRouter>,
     );
+    await waitFor(() => assert.ok(screen.getByText('Beta')));
+    assert.equal(screen.getByText('Beta').closest('nav')?.getAttribute('aria-label'), 'Main navigation');
+    assert.equal(screen.getByText('Beta').getAttribute('aria-describedby'), 'beta-details');
     assert.equal(screen.getByRole('link', { name: 'Search' }).getAttribute('aria-current'), 'page');
     fireEvent.click(screen.getByRole('link', { name: 'Support' }));
     await waitFor(() =>
