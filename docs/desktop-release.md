@@ -219,12 +219,15 @@ assets available while updating the feed; upload the new files first and replace
 `beta.yml` last. No credentials are embedded in this public feed. An unpublished
 or missing feed is logged and retried by automatic checks; it is not a working update test.
 
-The feed now contains the already installed `1.12.0-beta1` artifact, including
-its installer, blockmap and beta.yml; the tester confirmed beta1 reports up to date.
-Actions artifacts alone are not an updater feed. Next, manually build
-`1.12.0-beta2` with the badge and update-dialog changes and publish to the same feed,
-replacing beta.yml last. Leave beta1 installed on the test PC so its updater,
-rather than a manual installation of beta2, performs the upgrade.
+The feed now offers `1.12.0-beta2` with the badge and update-dialog changes;
+the older beta1 installer remains available. The [beta2 build](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38763530900)
+passed all 84 tests and the Windows installer checks. The public installer,
+blockmap and update manifest were verified after publication. Actions artifacts
+alone are not an updater feed.
+
+The tester previously confirmed beta1 reports up to date. Leave beta1 installed
+on the test PC so its updater, rather than a manual installation of beta2,
+performs the upgrade. This Windows upgrade test is still pending.
 
 Test A → B on Windows before public release: install A manually, retain login and
 settings, publish the chosen higher B to the test feed, check/download B, choose
