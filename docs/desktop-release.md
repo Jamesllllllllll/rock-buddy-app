@@ -194,7 +194,7 @@ gameplay, upgrade, or PayPal sandbox acceptance below.
 
 ## Beta5 candidate
 
-The next test build is `1.12.0-beta5`. It restores exact Width/Height controls in
+The published test build is `1.12.0-beta5`. It restores exact Width/Height controls in
 Config, sets a 640 × 480 minimum window, and makes ranking cards adapt to two
 columns in smaller windows. It fixes stray zeroes beside uncrowned/unverified
 players and adds a Sniffer header indicator: green for tracking, orange for
@@ -246,17 +246,17 @@ assets available while updating the feed; upload the new files first and replace
 `beta.yml` last. No credentials are embedded in this public feed. An unpublished
 or missing feed is logged and retried by automatic checks; it is not a working update test.
 
-The feed now offers `1.12.0-beta4`; the older beta1, beta2 and beta3 installers
-remain available. The [beta4 build](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38845104229)
-(attempt 2, source `d2ee6c5`) passed all 94 tests, the Windows native build,
-packaging, installed startup/rehearsal routing and settings-isolation checks, and
-update-file validation. The installer and blockmap digests match GitHub's uploaded
-assets, the public installer responds successfully, and the published `beta.yml`
-matches the checked build. Actions artifacts alone are not an updater feed.
+The feed now offers `1.12.0-beta5`; the older beta1 through beta4 installers
+remain available. The [beta5 build](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38849571476)
+(source `3f88dc7`) passed all 103 tests, the Windows native build, packaging,
+installed startup/rehearsal routing and settings-isolation checks, and update-file
+validation. The installer and blockmap digests match GitHub's uploaded assets,
+and the published update manifest matches the checked build. Actions artifacts
+alone are not an updater feed.
 
-The first attempt was cancelled during discussion of the backend target; no
-production-routing changes were published. Beta4 remains connected to rehearsal,
-with sandbox PayPal, and preserves the existing beta installation and settings.
+Beta5 remains connected to rehearsal, with sandbox PayPal, and preserves the
+existing beta installation and settings. Precise resizing still needs Windows
+acceptance; a tiled Linux window can have its dimensions controlled by Hyprland.
 
 Leave an older Beta installed so its updater performs the upgrade. Restart the
 app to check immediately; beta3 also has Check for updates in the changelog.
