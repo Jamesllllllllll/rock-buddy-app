@@ -3,7 +3,8 @@
 /*  Head nav */
 
 .navtop {
-    background-color: #2222225b;
+    background-color: #f4f4f5;
+    background-image: linear-gradient(#2222225b, #2222225b);
     border-radius: 12px;
     padding: 1%;
 }

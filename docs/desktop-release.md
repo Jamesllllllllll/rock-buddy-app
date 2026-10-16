@@ -198,6 +198,8 @@ Installed Windows builds check at startup and every four hours. There is no manu
 check button. The current version appears at the bottom left. Checks stay quiet;
 downloads show a compact progress indicator in the header. Background updater
 errors are recorded in the local log.
+The shared header stays visible while scrolling, including when its links wrap
+in a narrow window. Each theme has an opaque header background.
 
 Once an update is downloaded, a focused in-app dialog offers **Restart now** or
 **Restart later**. Escape and clicking outside do not dismiss it: choose a button.

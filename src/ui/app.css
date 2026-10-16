@@ -10,6 +10,10 @@ body {
     padding: 8px 8px 64px;
 }
 .navtop {
+    /* Keep navigation and update controls above scrolling page content. */
+    position: sticky;
+    top: 0;
+    z-index: 1001;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
