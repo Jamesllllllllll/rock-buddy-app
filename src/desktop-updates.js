@@ -10,6 +10,7 @@ function updatesEnabled(packaged, platform, host, packagedBackend, hosts) {
 function createDesktopUpdates(updater, { version, allowBeta, canInstall, onState, onLatest = () => {} }) {
     let state = { status: 'idle', message: '', version: null, percent: 0 };
     let checking = false;
+    let checkedBetas = false;
     let installing = false;
 
     function publish(patch) {
@@ -32,7 +33,8 @@ function createDesktopUpdates(updater, { version, allowBeta, canInstall, onState
 
     updater.on('checking-for-update', () => publish({ status: 'checking', message: 'Checking for updates…' }));
     updater.on('update-not-available', () => {
-        onLatest(true);
+        // Stable-only checks cannot confirm that no newer beta exists.
+        onLatest(checkedBetas && allowBeta());
         publish({ status: 'idle', message: 'Rock Buddy is up to date.', version: null, percent: 0 });
     });
 
@@ -61,7 +63,8 @@ function createDesktopUpdates(updater, { version, allowBeta, canInstall, onState
     async function check() {
         if (checking || installing || ['downloading', 'ready', 'installing'].includes(state.status)) return state;
         checking = true;
-        updater.allowPrerelease = allowBeta();
+        checkedBetas = allowBeta();
+        updater.allowPrerelease = checkedBetas;
         updater.allowDowngrade = false;
         try { await updater.checkForUpdates(); } catch { failed(); }
         finally { checking = false; }

@@ -43,7 +43,6 @@ export class Sniffer {
     // Refresh rate in milliseconds
     private static readonly refreshRate: number = 100; // milliseconds
     private static readonly rocksnifferTimeout: number = 1000; // milliseconds
-    private static snortRate: number = 3000; // milliseconds
     private static readonly pauseThreshold: number = 500; // milliseconds
 
     private readonly _rocksmith: Rocksmith;
@@ -88,9 +87,12 @@ export class Sniffer {
     private _speedChange = false;
 
     // Snort data
+    private snortRate = 3000; // milliseconds
+    private snortRateRequest = 0;
+    private unsubscribeUpdates?: () => void;
     private _snort: boolean = true; // Set true on startup to ensure initial snorting
     private _snorted: boolean = false; // Set false on startup to ensure initial snorting
-    private _snortCountdown: number = Sniffer.snortRate / 1000; // seconds
+    private _snortCountdown: number = this.snortRate / 1000; // seconds
     private _timeSinceLastSnort: number = 0;
 
     // Lurk mode
@@ -179,14 +181,42 @@ export class Sniffer {
             sniffer._lurkMode =
                 !!(await read('lurk_mode')) || !!(await read('use_external_rocksniffer'));
             sniffer._extraLogging = !!(await read('extra_logging'));
-            Sniffer.snortRate = (await window.api.onLatestBetaVersion()) ? 0 : 3000;
-            sniffer._snortCountdown = Sniffer.snortRate / 1000;
+
+            // Listen before reading so a late update check can enable instant snorts.
+            let previousStatus: string | undefined;
+            sniffer.unsubscribeUpdates = window.api.onUpdateState(({ status }) => {
+                if (status === previousStatus) return;
+                previousStatus = status;
+
+                if (status === 'idle' || status === 'downloading') {
+                    void sniffer.refreshSnortRate();
+                }
+            });
+            await sniffer.refreshSnortRate();
             signal?.throwIfAborted();
             sniffer.publish({ lurkMode: sniffer._lurkMode });
             return sniffer;
         } catch (error) {
             sniffer.stop();
             throw error;
+        }
+    }
+
+    // Apply update results without restarting gameplay or repeating an upload.
+    private async refreshSnortRate(): Promise<void> {
+        const request = ++this.snortRateRequest;
+
+        try {
+            const eligible = await window.api.onLatestBetaVersion();
+            if (this.stopped || request !== this.snortRateRequest) return;
+
+            const rate = eligible ? 0 : 3000;
+            if (rate === this.snortRate) return;
+
+            this.snortRate = rate;
+            this._snortCountdown = rate / 1000;
+        } catch {
+            // An unavailable update check must not interrupt gameplay.
         }
     }
 
@@ -202,6 +232,8 @@ export class Sniffer {
         this.stopped = true;
         clearInterval(this.timer);
         this.timer = undefined;
+        this.unsubscribeUpdates?.();
+        this.unsubscribeUpdates = undefined;
         this.listeners.clear();
         this._soundEffect.disable();
         if (wasRunning) window.api.setGameplayActive(false);
@@ -919,7 +951,7 @@ export class Sniffer {
             this._snorted = false;
 
             // Reset the snort countdown
-            this._snortCountdown = Sniffer.snortRate / 1000;
+            this._snortCountdown = this.snortRate / 1000;
 
             // If new profile data is available AND the song is changing, snort the previous song data
             // This fixes a bug where rock buddy data would not be updated after playing a song in nonstop play
@@ -933,8 +965,8 @@ export class Sniffer {
             }
         }
 
-        // If it has been over 10 seconds since the last snort, enable the snort button
-        if (!this._snort && this._timeSinceLastSnort / 1000 >= Sniffer.snortRate / 1000) {
+        // Enable the snort button once this account's delay has passed
+        if (!this._snort && this._timeSinceLastSnort / 1000 >= this.snortRate / 1000) {
             this.publish({ canSnort: true });
         }
 
@@ -942,7 +974,7 @@ export class Sniffer {
         if (
             this._snorted === false &&
             this._snortCountdown <= 0 &&
-            this._timeSinceLastSnort > Sniffer.snortRate
+            this._timeSinceLastSnort > this.snortRate
         ) {
             this._snort = true;
         }

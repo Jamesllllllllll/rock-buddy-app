@@ -283,6 +283,14 @@ respect the user's Beta Testing preference. Official versions use `beta.N` so Gi
 can select the next beta and later stable release. Only the API request version
 is translated to the existing `betaN` syntax; no backend deployment is required. No downgrade is allowed. The test installer uses a separate generic
 feed at the fork's `desktop-beta` release and never installs production builds.
+Instant snorts require **Beta Testing** to be enabled and an update check that
+includes prereleases to confirm the installed version is current. That version
+can be a beta or regular release. A newer release restores the three-second delay;
+downloading it does not qualify until it is installed. Late update results apply
+without restarting the sniffer. During Windows acceptance, check for updates from
+the changelog with Beta Testing enabled and select another song to confirm the
+countdown disappears when current. Disabling Beta Testing restores the delay.
+
 Source/local/custom-server launches cannot update themselves.
 
 For an actual updater test, a maintainer must deliberately publish the chosen beta
