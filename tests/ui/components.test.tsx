@@ -13,12 +13,15 @@ import {
     waitFor,
     within,
 } from '@testing-library/react';
+import { ThemeProvider } from '../../src/ui/Theme';
 import { AppHeader } from '../../src/ui/AppHeader';
 import { DesktopStatus } from '../../src/ui/DesktopStatus';
 import { DesktopUpdates, DesktopVersion } from '../../src/ui/DesktopUpdates';
 import { SupportPage } from '../../src/support/SupportPage';
 import { Footer } from '../../src/ui/Footer';
 import { useDesktopState } from '../../src/ui/useDesktopState';
+
+Object.assign(globalThis, { localStorage: window.localStorage });
 
 // Hold a response until the test chooses to resolve or reject it.
 function deferred<T>() {
@@ -90,32 +93,32 @@ test('ready updates require a choice, Later can reopen, and late snapshots canno
     });
     render(<StrictMode><DesktopStatus /><DesktopVersion /><DesktopUpdates /></StrictMode>);
     await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta1')));
-    assert.equal(screen.queryByRole('button', { name: 'Check for updates' }), null);
+    assert.ok(!screen.queryByRole('button', { name: 'Check for updates' }));
 
     connection.emit({ connected: false, message: 'Connection lost' });
     assert.ok(screen.getByRole('button', { name: 'Reload page' }));
     updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
     const dialog = screen.getByRole('alertdialog') as HTMLDialogElement;
     assert.equal(dialog.open, true);
-    assert.equal(document.activeElement, screen.getByRole('button', { name: 'Restart later' }));
+    assert.ok(document.activeElement === screen.getByRole('button', { name: 'Restart later' }));
     assert.equal(fireEvent.keyDown(document.activeElement!, { key: 'Escape' }), false);
     assert.equal(fireEvent(dialog, new window.Event('cancel', { cancelable: true })), false);
     fireEvent.click(dialog);
     assert.equal(dialog.open, true);
-    assert.equal(screen.queryByRole('button', { name: 'Close' }), null);
+    assert.ok(!screen.queryByRole('button', { name: 'Close' }));
     await act(async () => initial.resolve({ status: 'disabled', message: '' }));
     assert.ok(screen.getByRole('button', { name: 'Restart now' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
     assert.equal(sessionStorage.getItem('deferred-update'), '1.12.0-beta2');
-    assert.equal(screen.queryByRole('alertdialog'), null);
+    assert.ok(!screen.queryByRole('alertdialog'));
     fireEvent.click(screen.getByRole('button', { name: 'Update ready' }));
     assert.ok(screen.getByRole('alertdialog'));
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
 
     // The same ready event stays dismissed; a different version asks again.
     updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
-    assert.equal(screen.queryByRole('alertdialog'), null);
+    assert.ok(!screen.queryByRole('alertdialog'));
     updates.emit({ status: 'ready', version: '1.12.0-beta5', message: 'Update ready.' });
     assert.ok(screen.getByRole('alertdialog'));
 });
@@ -130,7 +133,7 @@ test('header shows download progress and deferred updates while automatic checks
     });
     render(
         <MemoryRouter>
-            <AppHeader><DesktopUpdates /></AppHeader>
+            <ThemeProvider><AppHeader><DesktopUpdates /></AppHeader></ThemeProvider>
             <Footer><DesktopVersion /></Footer>
         </MemoryRouter>,
     );
@@ -138,17 +141,17 @@ test('header shows download progress and deferred updates while automatic checks
 
     for (const status of ['checking', 'error', 'idle', 'disabled']) {
         updates.emit({ status, message: 'Background updater status' });
-        assert.equal(within(screen.getByRole('navigation')).queryByRole('button'), null);
-        assert.equal(screen.queryByRole('alertdialog'), null);
-        assert.equal(screen.queryByText('Background updater status'), null);
+        assert.ok(!within(screen.getByRole('navigation')).queryByRole('button', { name: /Check for updates|Update ready/ }));
+        assert.ok(!screen.queryByRole('alertdialog'));
+        assert.ok(!screen.queryByText('Background updater status'));
     }
 
     // Show progress inside navigation without prompting or exposing a manual check.
     updates.emit({ status: 'downloading', percent: 49.7 });
     assert.ok(screen.getByRole('status').closest('nav'));
     assert.equal(screen.getByRole('status').textContent, 'Downloading 50%');
-    assert.equal(within(screen.getByRole('navigation')).queryByRole('button'), null);
-    assert.equal(screen.queryByRole('alertdialog'), null);
+    assert.ok(!within(screen.getByRole('navigation')).queryByRole('button', { name: /Check for updates|Update ready/ }));
+    assert.ok(!screen.queryByRole('alertdialog'));
 
     updates.emit({ status: 'downloading' });
     assert.equal(screen.getByRole('status').textContent, 'Downloading…');
@@ -157,7 +160,7 @@ test('header shows download progress and deferred updates while automatic checks
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
     const ready = screen.getByRole('button', { name: 'Update ready' });
     assert.ok(ready.closest('nav'));
-    assert.equal(screen.queryByRole('status'), null);
+    assert.ok(!screen.queryByRole('status'));
     fireEvent.click(ready);
     assert.ok(screen.getByRole('alertdialog'));
 });
@@ -166,10 +169,10 @@ test('header navigates inside React and updates the active link', async () => {
     setApi({ getBetaNotice: async () => 'Rock Buddy Beta: test changes will be discarded.' });
     render(
         <MemoryRouter initialEntries={['/search']}>
-            <AppHeader />
+            <ThemeProvider><AppHeader /></ThemeProvider>
         </MemoryRouter>,
     );
-    assert.equal(screen.queryByText('Beta'), null);
+    assert.ok(!screen.queryByText('Beta'));
     assert.equal(screen.getByRole('link', { name: 'Search' }).getAttribute('aria-current'), 'page');
     fireEvent.click(screen.getByRole('link', { name: 'Support' }));
     await waitFor(() =>
@@ -244,7 +247,7 @@ test('successful browser opening asks for approval without claiming a completed 
     render(<SupportPage />);
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(button.disabled, false));
-    assert.equal(screen.queryByText(/PayPal sandbox/), null);
+    assert.ok(!screen.queryByText(/PayPal sandbox/));
     fireEvent.click(button);
     await waitFor(() =>
         assert.equal(
@@ -325,7 +328,7 @@ test('restart stays guarded while pending and can recover from blocked or failed
     await waitFor(() => assert.match(screen.getByRole('status').textContent || '', /Could not restart/));
     assert.ok(screen.getByRole('alertdialog'));
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
-    assert.equal(screen.queryByRole('alertdialog'), null);
+    assert.ok(!screen.queryByRole('alertdialog'));
 });
 
 
@@ -337,7 +340,7 @@ test('the version opens bundled current and historical release notes without net
     });
     render(<Footer><DesktopVersion /></Footer>);
     const version = await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta5' });
-    assert.equal(screen.queryByRole('dialog'), null);
+    assert.ok(!screen.queryByRole('dialog'));
 
     fireEvent.click(version);
     const dialog = screen.getByRole('dialog', { name: 'Changelog' });
@@ -347,12 +350,12 @@ test('the version opens bundled current and historical release notes without net
     assert.ok(within(dialog).getByRole('heading', { name: 'v1.11.0' }));
     assert.ok(within(dialog).getByText('Added Rocksmith Learn & Play Edition compatibility.'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
-    assert.equal(screen.queryByRole('dialog'), null);
+    assert.ok(!screen.queryByRole('dialog'));
     assert.equal(document.documentElement.style.overflow, '');
 
     fireEvent.click(version);
     fireEvent(screen.getByRole('dialog'), new window.Event('cancel', { cancelable: true }));
-    assert.equal(screen.queryByRole('dialog'), null);
+    assert.ok(!screen.queryByRole('dialog'));
 });
 
 

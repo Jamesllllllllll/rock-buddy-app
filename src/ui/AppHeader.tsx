@@ -1,6 +1,7 @@
-import { useRef, type ReactNode } from 'react';
+import { Fragment, useRef, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSession } from './Session';
+import { HeaderThemeChooser } from './Theme';
 
 const pages = ['Sniffer', 'Search', 'Rank', 'Profile', 'Config', 'Account', 'Support'];
 
@@ -49,17 +50,19 @@ export function AppHeader({ compact = false, children, snifferStatus }: { compac
                 <span className="header-title">Rock Buddy</span>
             </div>
             {links.map((name) => (
+                <Fragment key={name}>
+                {name === 'Config' && <HeaderThemeChooser />}
                 <NavLink
-                    key={name}
                     className="header-tab"
                     to={`/${name.toLowerCase()}`}
                     aria-label={name}
                     aria-describedby={name === 'Sniffer' && snifferStatus ? 'sniffer-status-tooltip' : undefined}
-                    style={name === 'Config' || compact ? { marginLeft: 'auto' } : undefined}
+                    style={compact ? { marginLeft: 'auto' } : undefined}
                 >
                     {name}
                     {name === 'Sniffer' && snifferStatus}
                 </NavLink>
+                </Fragment>
             ))}
             {children}
         </nav>

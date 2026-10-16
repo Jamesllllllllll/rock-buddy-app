@@ -178,7 +178,7 @@ body {
     outline: 2px solid var(--header-text);
     outline-offset: 2px;
 }
-.navtop .header-signout {
+.navtop :is(.header-signout, .header-theme-trigger) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -190,10 +190,10 @@ body {
     background: transparent;
     color: var(--header-text);
 }
-.navtop .header-signout:hover {
+.navtop :is(.header-signout, .header-theme-trigger):hover {
     background: color-mix(in srgb, var(--header-text) 10%, transparent);
 }
-.navtop .header-signout:focus-visible {
+.navtop :is(.header-signout, .header-theme-trigger):focus-visible {
     outline: 2px solid var(--header-text);
     outline-offset: 2px;
 }
@@ -275,8 +275,12 @@ main {
 }
 .live-values {
     justify-content: space-between;
-    margin-top: 10px;
+    margin-top: 12px;
     flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
+}
+.live-values > span {
+    white-space: nowrap;
 }
 .score-filters {
     display: flex;
@@ -292,6 +296,10 @@ main {
     height: 15px;
     margin-right: 5px;
     vertical-align: middle;
+}
+.verified-score-icon {
+    width: 18px;
+    height: 18px;
 }
 .verification-badge {
     height: 25px;
@@ -783,12 +791,8 @@ fieldset {
 .config-address .config-port {
     width: 100px;
 }
-.config-page .page-heading,
-.config-page .theme-controls {
+.config-page .page-heading {
     flex-wrap: wrap;
-}
-.config-page .theme-controls {
-    gap: 10px;
 }
 .config-page .checkbox-row {
     margin: 4px 8px 4px 0;
@@ -814,11 +818,6 @@ fieldset {
     width: 16px;
     margin: 0;
 }
-.theme-controls {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
 .window-size-row {
     flex-wrap: wrap;
 }
@@ -829,12 +828,6 @@ fieldset {
 }
 .window-size-row input {
     width: 90px;
-}
-.theme-controls input {
-    width: 40px;
-}
-.theme-controls select {
-    margin-inline-start: 6px;
 }
 .custom-theme-dialog {
     width: min(440px, calc(100vw - 48px));
@@ -887,10 +880,24 @@ fieldset {
 table {
     font-family: "Roboto Mono", monospace;
 }
+.column-picker-dialog {
+    width: min(360px, calc(100vw - 48px));
+    box-sizing: border-box;
+}
 .column-options {
     display: grid;
     gap: 12px;
     margin: 16px 0;
+}
+/* Checkboxes must not inherit the old text inputs' half-page width. */
+.column-options input[type="checkbox"] {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--streamer-accent-color, #7845b0);
+    color-scheme: var(--select-scheme);
 }
 .column-options label {
     display: flex;
@@ -910,4 +917,130 @@ th {
 }
 [role="alert"] {
     color: #ffb5b5;
+}
+
+/* Fixed column widths keep dragging predictable; wide tables scroll inside Sniffer. */
+.leaderboard-data.resizable-columns {
+    table-layout: fixed;
+    max-width: none;
+    border-spacing: 0;
+}
+.leaderboard-data .rank-cell {
+    padding-left: 12px;
+}
+.resizable-columns :is(th, td) {
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    overflow: hidden;
+}
+.resizable-columns th {
+    position: relative;
+    padding-inline-end: 12px;
+}
+.resizable-columns .text-button {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.column-resize-handle {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 10px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+.column-resize-handle::after {
+    content: '';
+    position: absolute;
+    inset: 4px 4px;
+    background: currentColor;
+    opacity: 0.3;
+}
+.column-resize-handle:is(:hover, :focus-visible)::after {
+    background: var(--streamer-accent-color, #a26ede);
+    opacity: 1;
+}
+.column-resize-handle:focus-visible {
+    outline: 2px solid var(--streamer-accent-color, #a26ede);
+    outline-offset: -2px;
+}
+.column-picker-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.column-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.column-order-controls {
+    display: flex;
+    gap: 4px;
+}
+.column-order-controls button {
+    padding: 2px 7px;
+}
+.column-font-choice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-block: 20px;
+}
+.column-font-choice select {
+    min-width: 0;
+    max-width: 100%;
+}
+.column-drag-label {
+    cursor: grab;
+    user-select: none;
+}
+.column-drag-label:active {
+    cursor: grabbing;
+}
+.resizable-columns th[data-drop-target] {
+    box-shadow: inset 3px 0 var(--streamer-accent-color, #a26ede);
+}
+
+.header-theme-chooser {
+    margin-inline-start: auto;
+    position: relative;
+    flex-shrink: 0;
+}
+/* The select covers the paintbrush so one click opens the native choices. */
+.app-shell .navtop .header-theme-trigger {
+    color: var(--header-text);
+    position: relative;
+    cursor: pointer;
+}
+.navtop .header-theme-trigger:focus-within {
+    outline: 2px solid var(--header-text);
+    outline-offset: 2px;
+}
+.app-shell .header-theme-trigger select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Keep headings on one line and measure their natural width for the resize limit. */
+.resizable-columns [data-column-heading] {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* An inset stripe marks your row without changing column widths. */
+.app-shell table tr.current-user {
+    box-shadow: none;
+}
+.app-shell table tr.current-user > td:first-child {
+    box-shadow: inset 3px 0 var(--current-row-accent);
 }

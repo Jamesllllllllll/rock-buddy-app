@@ -45,7 +45,7 @@
     color: var(--streamer-accent-text) !important;
 }
 
-.app-shell[data-theme="streamer"] .navtop .header-signout {
+.app-shell[data-theme="streamer"] .navtop :is(.header-signout, .header-theme-trigger) {
     border-radius: var(--streamer-radius);
 }
 
@@ -84,7 +84,7 @@
     accent-color: var(--streamer-accent-color);
 }
 
-.app-shell[data-theme="streamer"] :is(.rank, .king, .card, .app-dialog) {
+.app-shell[data-theme="streamer"] :is(.rank, .king, .card, .app-dialog, .live-data) {
     background: var(--streamer-panel-color);
     color: var(--streamer-text-color);
     border: 1px solid var(--custom-border);
@@ -138,8 +138,9 @@
 }
 
 .app-shell[data-theme="streamer"] table tr.current-user {
-    background: var(--streamer-accent-color);
-    color: var(--streamer-accent-text);
+    background: color-mix(in srgb, var(--streamer-accent-color) 12%, var(--streamer-panel-color));
+    color: var(--streamer-text-color);
+    --current-row-accent: var(--streamer-accent-color);
 }
 
 .app-shell[data-theme="streamer"] .frequency span {

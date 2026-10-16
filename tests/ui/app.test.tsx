@@ -271,7 +271,7 @@ test('a failed config save restores its value and does not block the next edit',
     fireEvent.click(logging);
     await waitFor(() => assert.equal(stored.get('user_data.1.extra_logging'), true));
     assert.equal((logging as HTMLInputElement).checked, true);
-    assert.equal(screen.queryByText('Could not save setting'), null);
+    assert.ok(!screen.queryByText('Could not save setting'));
 });
 
 test('window dimensions apply together, reject invalid input and recover from resize failures', async () => {
@@ -315,13 +315,13 @@ test('header sign out clears the session and offers sign in from Support', async
     const signOut = await screen.findByRole('button', { name: 'Sign out' });
     assert.equal(signOut.getAttribute('title'), 'Sign out');
     assert.ok(signOut.closest('nav'));
-    assert.equal(screen.queryByRole('link', { name: 'Sign in' }), null);
+    assert.ok(!screen.queryByRole('link', { name: 'Sign in' }));
 
     fireEvent.click(signOut);
     const signIn = await screen.findByRole('link', { name: 'Sign in' });
     assert.equal(stored.has('auth_data'), false);
     assert.equal(sessionStorage.getItem('auth_data'), null);
-    assert.equal(screen.queryByRole('button', { name: 'Sign out' }), null);
+    assert.ok(!screen.queryByRole('button', { name: 'Sign out' }));
     assert.ok(screen.getByRole('heading', { name: 'Support Rock Buddy' }));
 
     fireEvent.click(signIn);
@@ -338,7 +338,7 @@ test('a signed-out visitor can navigate from Support back to login', async () =>
     );
     fireEvent.click(await screen.findByRole('link', { name: 'Sign in' }));
     await screen.findByRole('textbox', { name: 'Username or email' });
-    assert.equal(screen.queryByRole('button', { name: 'Sign out' }), null);
+    assert.ok(!screen.queryByRole('button', { name: 'Sign out' }));
 });
 
 test('header logout reports saved-login deletion failures after the session closes', async () => {
@@ -450,5 +450,5 @@ test('older statistics responses hide the new count instead of inventing a zero'
         </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'Accuracy' });
-    assert.equal(screen.queryByRole('heading', { name: 'Verified 100% scores' }), null);
+    assert.ok(!screen.queryByRole('heading', { name: 'Verified 100% scores' }));
 });

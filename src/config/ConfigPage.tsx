@@ -4,7 +4,6 @@ import { useResource } from '../ui/useResource';
 import { useAction } from '../ui/useAction';
 import { AsyncState } from '../ui/AsyncState';
 import { Modal } from '../ui/Modal';
-import { ThemeControls } from '../ui/Theme';
 import { useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../ui/api';
 import { WindowSizeControls } from './WindowSizeControls';
@@ -383,7 +382,6 @@ export function ConfigPage() {
         <main className="config-page">
             <div className="page-heading">
                 <h1>Config</h1>
-                <ThemeControls />
             </div>
             <AsyncState {...config} retry={config.reload} />
             {config.data && (

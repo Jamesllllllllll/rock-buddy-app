@@ -89,25 +89,38 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     );
 }
 
-export function ThemeControls() {
+// A native dropdown opens directly from the paintbrush and handles keyboard navigation.
+export function HeaderThemeChooser() {
     const value = useContext(ThemeContext)!;
     const [editing, setEditing] = useState(false);
 
+    function chooseTheme(next: string) {
+        if (next === 'customize') {
+            value.setTheme('streamer');
+            setEditing(true);
+            return;
+        }
+
+        value.setTheme(next);
+    }
+
     return (
-        <div className="theme-controls">
-            <label>
-                Theme:{' '}
-                <select value={value.theme} onChange={event => value.setTheme(event.target.value)}>
+        <div className="header-theme-chooser">
+            <label className="header-theme-trigger" title="Theme">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="m14 6 4 4M10 14l10-10a2.1 2.1 0 0 1 3 3L13 17M10 14l3 3M10 14c-3-2-6 0-6 3 0 2-1 3-2 4 5 1 10-1 11-4" transform="translate(-1 -1)" />
+                </svg>
+                <select aria-label="Choose theme" value={value.theme}
+                    onChange={event => chooseTheme(event.target.value)}>
                     <option value="dark">Dark</option>
                     <option value="light">Light</option>
                     <option value="classic">Retro</option>
                     <option value="streamer">Custom</option>
+                    <option value="customize">Customize…</option>
                 </select>
             </label>
-            {value.theme === 'streamer' && (
-                <button type="button" onClick={() => setEditing(true)} aria-haspopup="dialog">Customize</button>
-            )}
-            {editing && value.theme === 'streamer' && (
+            {editing && (
                 <Modal title="Custom theme" className="custom-theme-dialog" onClose={() => setEditing(false)}>
                     <div className="custom-theme-fields">
                         {colorFields.map(([field, label]) => (

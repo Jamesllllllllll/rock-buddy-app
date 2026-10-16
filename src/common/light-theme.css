@@ -29,6 +29,11 @@ table tr:hover {
         inset 0 1px rgba(0, 0, 0, 0.25);
 }
 
+.app-shell[data-theme="light"] table tr.current-user {
+    background: #e4ddec;
+    --current-row-accent: #7950a5;
+}
+
 table {
     width: 100%;
     max-width: 100%;
@@ -146,4 +151,24 @@ input, select { color: #202024; background: #e7e2ef; }
 .app-shell[data-theme="light"] .support-page :is(button, input):focus-visible,
 .app-shell[data-theme="light"] .frequency input:focus-visible + span {
     outline-color: #65349b;
+}
+
+/* Live stats use the same pale surface as other Light panels. */
+.app-shell[data-theme="light"] .live-data {
+    background: #eeebf2;
+    color: #202024;
+    border-color: #d6cfdf;
+}
+
+/* Shared dialogs, including the column picker, use a light surface and readable text. */
+.app-shell[data-theme="light"] .app-dialog {
+    background: #f4f4f5;
+    color: #202024;
+    border-color: #d6cfdf;
+    scrollbar-color: #8a739f #f4f4f5;
+    color-scheme: light;
+}
+
+.app-shell[data-theme="light"] .app-dialog :is(h2, h3, p, label, .close) {
+    color: inherit;
 }

@@ -8,7 +8,7 @@
         "start": "npm run build && electron .",
         "dev": "npm run build && electron . http://raspberrypi:8080",
         "release": "git clean -dfX && git submodule foreach --recursive git clean -dfX && npm install && npm run build && npm run build:renderer:production && electron-builder",
-        "test": "tsc --noEmit -p tests/tsconfig.json && node --test tests/*.test.js && tsx --tsconfig tests/tsconfig.json --test tests/ui/*.test.tsx",
+        "test": "tsc --noEmit -p tests/tsconfig.json && node --test --test-concurrency=2 --test-timeout=30000 tests/*.test.js && tsx --tsconfig tests/tsconfig.json --test --test-concurrency=2 --test-timeout=30000 tests/ui/*.test.tsx",
         "start:staging": "npm run build && electron . --backend=staging",
         "start:local": "npm run build && electron . --backend=local",
         "package:desktop": "npm run build:renderer:production && electron-builder --config electron-builder.release.cjs --win nsis --x64 --publish never",

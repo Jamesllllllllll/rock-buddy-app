@@ -4,6 +4,9 @@ import { useDesktopState } from './useDesktopState';
 
 // These notes describe the code bundled with this installer, including beta builds.
 const currentChanges = [
+    'Resize and reorder Sniffer columns, choose a table font, and keep those preferences after restarting.',
+    'Choose a theme directly from the header paintbrush, including custom colors.',
+    'Clearer verified checkmarks, subtle score-row highlights and themed Live Feed, Snort and column controls.',
     'A Sniffer status light in the header shows tracking, waiting, paused and error states.',
     'Set precise window width and height in Config; the minimum window size is 640 × 480.',
     'Rankings adapt to two columns in smaller windows, with text sized to each card.',
@@ -25,6 +28,13 @@ const currentChanges = [
 // Summaries from the official GitHub release notes; missing versions are omitted.
 // https://github.com/tnt-coders/rock-buddy-app/releases
 const previousReleases = [
+    {
+        version: '1.12.0-beta5',
+        changes: [
+            'Restored precise window sizing and added responsive ranking cards.',
+            'Added the Sniffer status light and fixed stray zeroes beside players.',
+        ],
+    },
     {
         version: '1.12.0-beta4',
         changes: [
@@ -68,7 +78,7 @@ const previousReleases = [
 
 // Local text keeps the changelog available offline without remote HTML or API calls.
 export function Changelog({ version, onClose }: { version: string; onClose: () => void }) {
-    const releases = [{ version, changes: currentChanges }, ...previousReleases];
+    const releases = [{ version, changes: currentChanges }, ...previousReleases.filter(release => release.version !== version)];
     const update = useDesktopState(window.api.getUpdateState, window.api.onUpdateState);
     const busy = useRef(false);
     const [checking, setChecking] = useState(false);

@@ -32,6 +32,15 @@ const product = beta ? 'Beta' : 'Staging';
     assert.equal(metadata.name, `rock-buddy-${channel}`);
     assert.equal(metadata.rockBuddyBackend, channel);
     assert.ok(!listPackage(asar).some(file => /(?:\.private|\.env|rock_buddy_log|node_modules\/\.cache)/.test(file)));
+
+    // The Linux song preview must never replace real gameplay in an installer.
+    assert.equal(metadata.main, './src/main.js');
+    assert.ok(!listPackage(asar).some(file => /(?:song-preview|[/\\]\.generated[/\\])/.test(file)));
+    const renderer = extractFile(asar, 'dist/ui/bundle.js').toString('utf8');
+    for (const marker of ['PreviewLead', 'PreviewPlayer', 'PreviewRhythm', 'song-preview']) {
+        assert.ok(!renderer.includes(marker), `Preview code must not ship: ${marker}`);
+    }
+
     for (const file of ['RockSniffer.exe', 'coreclr.dll', 'hostfxr.dll']) {
         assert.ok(fs.existsSync(path.join(install, 'RockSniffer', file)), `Bundled runtime: ${file}`);
     }

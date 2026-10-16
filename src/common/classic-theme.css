@@ -112,7 +112,7 @@
     border-bottom: 1px solid var(--retro-light);
 }
 
-/* Tables use white rows and a navy highlight instead of the dark theme glow. */
+/* Tables use white rows and a soft navy highlight for your scores. */
 .app-shell[data-theme="classic"] table {
     color: var(--retro-ink);
 }
@@ -132,11 +132,12 @@
 }
 
 .app-shell[data-theme="classic"] table tr.current-user {
-    background: var(--retro-navy);
-    color: var(--retro-light);
+    background: #e3e3f2;
+    color: var(--retro-ink);
+    --current-row-accent: var(--retro-navy);
 }
 
-.app-shell[data-theme="classic"] :is(.rank, .king, .card) {
+.app-shell[data-theme="classic"] :is(.rank, .king, .card, .live-data) {
     background: var(--retro-face);
     color: var(--retro-ink);
     border: 1px solid;

@@ -51,7 +51,7 @@ test('initial loading has a placeholder, and refresh failures keep previously lo
     response = refresh.promise;
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     assert.ok(screen.getByText('Saved profile'));
-    assert.equal(screen.queryByRole('status', { name: 'Loading' }), null);
+    assert.ok(!screen.queryByRole('status', { name: 'Loading' }));
     await act(async () => refresh.reject(new Error('Offline')));
     await screen.findByText('Showing previous data. Offline');
     assert.ok(screen.getByText('Saved profile'));
@@ -59,7 +59,7 @@ test('initial loading has a placeholder, and refresh failures keep previously lo
     response = Promise.resolve('New profile');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await screen.findByText('New profile');
-    assert.equal(screen.queryByRole('alert'), null);
+    assert.ok(!screen.queryByRole('alert'));
 });
 
 test('quick navigation reuses an in-flight read and then returns cached data immediately', async () => {
@@ -79,7 +79,7 @@ test('quick navigation reuses an in-flight read and then returns cached data imm
     view.rerender(tree(false));
     view.rerender(tree(true));
     assert.ok(screen.getByText('Cached profile'));
-    assert.equal(screen.queryByRole('status', { name: 'Loading' }), null);
+    assert.ok(!screen.queryByRole('status', { name: 'Loading' }));
     assert.equal(calls, 1);
 });
 
@@ -101,7 +101,7 @@ test('stale data remains visible when navigation starts a background refresh', a
     await act(async () => { await client.invalidateQueries({ refetchType: 'none' }); });
     view.rerender(tree(true));
     assert.ok(screen.getByText('Old data'));
-    assert.equal(screen.queryByRole('status', { name: 'Loading' }), null);
+    assert.ok(!screen.queryByRole('status', { name: 'Loading' }));
     await act(async () => next.resolve('Current data'));
     await screen.findByText('Current data');
 });
@@ -122,11 +122,11 @@ test('changing login discards private cache and late responses cannot repopulate
     view.rerender(tree('first-login', () => pending.promise));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     view.rerender(tree('next-login', () => Promise.resolve('Other account')));
-    assert.equal(screen.queryByText('Private data'), null);
+    assert.ok(!screen.queryByText('Private data'));
     await screen.findByText('Other account');
     await act(async () => pending.resolve('Late private data'));
     assert.equal(clients[0].getQueryCache().getAll().length, 0);
-    assert.equal(screen.queryByText('Late private data'), null);
+    assert.ok(!screen.queryByText('Late private data'));
 });
 
 test('saving an edit cancels stale reads before replacing cached data', async () => {

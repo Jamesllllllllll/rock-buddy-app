@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { approxEqual } from '../common/functions';
 import { request } from './api';
 import { useAuth } from './Session';
 import { useResource } from './useResource';
 import { AsyncState } from './AsyncState';
 import { ProfileDialog } from '../profile/ProfilePage';
-import { scoreColumns, type ScoreColumn } from './ScoreColumns';
+import { useColumnMinimums } from './useColumnMinimums';
+import { ColumnResizeHandle } from './ColumnResizeHandle';
+import { scoreColumns, tableFonts, type TableFont, type ColumnWidths, type ScoreColumn } from './ScoreColumns';
 
 import type { Score } from '../common/types';
 export type { Score } from '../common/types';
@@ -28,13 +30,25 @@ export function rankedScores(scores: Score[], mode: string) {
     });
 }
 
-export function ScoresTable({ scores, mode, hiddenColumns = [] }: {
+export function ScoresTable({ scores, mode, hiddenColumns = [], columnWidths, onColumnResize, columnOrder, onColumnReorder, font }: {
     scores: Score[];
     mode: string;
     hiddenColumns?: ScoreColumn[];
+    columnWidths?: ColumnWidths;
+    columnOrder?: ScoreColumn[];
+    onColumnReorder?: (from: ScoreColumn, to: ScoreColumn) => void;
+    font?: TableFont;
+    onColumnResize?: (id: ScoreColumn, width: number, save: boolean) => void;
 }) {
     const auth = useAuth();
     const [player, setPlayer] = useState<string>();
+    const dragging = useRef<ScoreColumn | null>(null);
+    const [dropTarget, setDropTarget] = useState<ScoreColumn>();
+    const visibleColumns = scoreColumns(mode, columnOrder).filter(({ id }) => id === 'username' || !hiddenColumns.includes(id));
+    const resizable = columnWidths && onColumnResize;
+    const { table, minimums } = useColumnMinimums(!!resizable && scores.length > 0, visibleColumns.map(column => column.id).join(','), font);
+    const widthOf = (id: ScoreColumn) => Math.max(columnWidths?.[id] || 0, minimums[id] || 0);
+    const tableWidth = visibleColumns.reduce((total, { id }) => total + widthOf(id), 0);
     if (!scores.length)
         return (
             <p>
@@ -44,12 +58,38 @@ export function ScoresTable({ scores, mode, hiddenColumns = [] }: {
 
     return (
         <>
-            <table className="leaderboard-data">
+            <table ref={table} className={`leaderboard-data${resizable ? ' resizable-columns' : ''}`} style={{ ...(resizable ? { width: tableWidth } : {}), ...(font ? { fontFamily: tableFonts[font].family } : {}) }}>
+                {resizable && <colgroup>{visibleColumns.map(({ id }) => <col key={id} style={{ width: widthOf(id) }} />)}</colgroup>}
                 <thead>
                     <tr>
-                        {scoreColumns(mode)
-                            .filter(({ id }) => id === 'username' || !hiddenColumns.includes(id))
-                            .map(({ id, label }) => <th key={id}>{label}</th>)}
+                        {visibleColumns.map(({ id, label }) => (
+                            <th key={id} className={id === 'rank' ? 'rank-cell' : undefined} aria-label={label} data-drop-target={dropTarget === id || undefined}
+                                onDragOver={event => {
+                                    if (!dragging.current || !onColumnReorder) return;
+                                    event.preventDefault();
+                                    event.dataTransfer.dropEffect = 'move';
+                                    setDropTarget(id);
+                                }}
+                                onDragLeave={() => setDropTarget(undefined)}
+                                onDrop={event => {
+                                    if (!dragging.current || !onColumnReorder) return;
+                                    event.preventDefault();
+                                    onColumnReorder(dragging.current, id);
+                                    dragging.current = null;
+                                    setDropTarget(undefined);
+                                }}>
+                                <span data-column-heading={id} className={onColumnReorder ? 'column-drag-label' : undefined}
+                                    draggable={!!onColumnReorder} title={onColumnReorder ? 'Drag to reorder' : undefined}
+                                    onDragStart={event => {
+                                        dragging.current = id;
+                                        event.dataTransfer.effectAllowed = 'move';
+                                        event.dataTransfer.setData('text/plain', id);
+                                    }}
+                                    onDragEnd={() => { dragging.current = null; setDropTarget(undefined); }}>{label}</span>
+                                {resizable && <ColumnResizeHandle label={label} width={widthOf(id)} minimum={minimums[id]}
+                                    onResize={(width, save) => onColumnResize(id, width, save)} />}
+                            </th>
+                        ))}
                     </tr>
                 </thead>
                 <tbody>
@@ -58,56 +98,9 @@ export function ScoresTable({ scores, mode, hiddenColumns = [] }: {
                             key={score.user_id}
                             className={score.user_id === auth.user_id ? 'current-user' : undefined}
                         >
-                            {!hiddenColumns.includes('rank') && <td>{score.rank}</td>}
-                            <td>
-                                {Boolean(score.king) && (
-                                    <img
-                                        className="score-badge"
-                                        src="../images/crown.png"
-                                        alt="King"
-                                    />
-                                )}
-                                <button
-                                    className="text-button"
-                                    onClick={() => setPlayer(score.username)}
-                                >
-                                    {score.username}
-                                </button>
-                            </td>
-                            {!hiddenColumns.includes('lastPlayed') && (
-                                <td>{score.last_played ?? 'Unknown'}</td>
-                            )}
-                            {!hiddenColumns.includes('playCount') && (
-                                <td>{score.play_count ?? 'Unknown'}</td>
-                            )}
-                            {mode === 'las' ? (
-                                <>
-                                    {!hiddenColumns.includes('streak') && <td>{score.streak}</td>}
-                                    {!hiddenColumns.includes('mastery') && (
-                                        <td>
-                                            {Boolean(score.verified) && (
-                                                <img
-                                                    className="score-badge"
-                                                    src="../images/verification-icons/verified-badge.png"
-                                                    alt="Verified"
-                                                />
-                                            )}
-                                            {(score.mastery * 100).toFixed(2)}%
-                                        </td>
-                                    )}
-                                </>
-                            ) : (
-                                !hiddenColumns.includes('score') && (
-                                    <td>
-                                        <img
-                                            className="score-badge"
-                                            src={`../images/badge-icons/badge-${score.badges}.png`}
-                                            alt={`Badge ${score.badges}`}
-                                        />
-                                        {score.score.toLocaleString('en-US')}
-                                    </td>
-                                )
-                            )}
+                            {visibleColumns.map(({ id }) => (
+                                <td key={id} className={id === 'rank' ? 'rank-cell' : undefined}><ScoreCell column={id} score={score} onPlayer={setPlayer} /></td>
+                            ))}
                         </tr>
                     ))}
                 </tbody>
@@ -115,6 +108,39 @@ export function ScoresTable({ scores, mode, hiddenColumns = [] }: {
             {player && <ProfileDialog username={player} onClose={() => setPlayer(undefined)} />}
         </>
     );
+}
+
+// Headers, widths and cells all follow the same ordered list of column IDs.
+function ScoreCell({ column, score, onPlayer }: {
+    column: ScoreColumn;
+    score: Score & { rank: number };
+    onPlayer: (username: string) => void;
+}) {
+    switch (column) {
+        case 'rank': return score.rank;
+        case 'lastPlayed': return score.last_played ?? 'Unknown';
+        case 'playCount': return score.play_count ?? 'Unknown';
+        case 'streak': return score.streak;
+        case 'username': return <>
+            {Boolean(score.king) && <img className="score-badge" src="../images/crown.png" alt="King" />}
+            <button className="text-button" onClick={() => onPlayer(score.username)}>{score.username}</button>
+        </>;
+        case 'mastery': return <>
+            {Boolean(score.verified) && (
+                <svg className="score-badge verified-score-icon" viewBox="0 0 20 20" role="img" aria-label="Verified">
+                    <title>Verified</title>
+                    <circle cx="10" cy="10" r="9" fill="#bbf7d0" />
+                    <path d="m5.5 10 3 3 6-6" fill="none" stroke="#14532d" strokeWidth="2.5"
+                        strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            )}
+            {(score.mastery * 100).toFixed(2)}%
+        </>;
+        case 'score': return <>
+            <img className="score-badge" src={`../images/badge-icons/badge-${score.badges}.png`} alt={`Badge ${score.badges}`} />
+            {score.score.toLocaleString('en-US')}
+        </>;
+    }
 }
 
 export function Leaderboard({
@@ -180,7 +206,7 @@ export function ScoreFilters({
             >
                 {paths.map((name) => (
                     <option value={name.toLowerCase()} key={name}>
-                        {name}
+                        {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
                     </option>
                 ))}
             </select>

@@ -103,6 +103,9 @@ function SnifferView({ engine }: { engine: Sniffer }) {
                             hidden={columns.hidden}
                             onChange={columns.change}
                             error={columns.error}
+                            onResetWidths={columns.resetWidths}
+                            order={columns.order} onOrderChange={columns.changeOrder}
+                            font={columns.font} onFontChange={columns.changeFont}
                         />
                         <button
                             id="snort"
@@ -121,6 +124,9 @@ function SnifferView({ engine }: { engine: Sniffer }) {
                                 scores={state.leaderboard.scores}
                                 mode={state.leaderboard.mode}
                                 hiddenColumns={columns.hidden}
+                                columnWidths={columns.widths}
+                                onColumnResize={columns.resize}
+                                columnOrder={columns.order} onColumnReorder={columns.reorder} font={columns.font}
                             />
                         )}
                     </div>

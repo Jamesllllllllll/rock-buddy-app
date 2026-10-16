@@ -34,6 +34,44 @@ automatic feature-branch build. Historical test branches do not publish releases
   native reader builds and installed gameplay still need Windows. Both development
   and production renderer builds clear only generated `dist/` output first.
 
+## Local preview and test resource limits
+
+- Run only one Rock Buddy preview watcher and one test run at a time. Inspect
+  existing processes before starting another; stop only processes owned by this
+  task. Use separate process groups/cgroups so cleanup also stops child processes.
+- On Linux with a systemd user session, run tests in a transient service with hard
+  memory, swap and process limits. From the repository directory:
+
+  ```sh
+  systemd-run --user --wait --collect --pipe --unit=rock-buddy-tests \
+    --working-directory="$PWD" \
+    -p MemoryMax=2G -p MemorySwapMax=0 -p TasksMax=96 \
+    -p RuntimeMaxSec=120 -p TimeoutStopSec=5 -p KillMode=control-group \
+    -p LimitCORE=0 /usr/bin/env "PATH=$PATH" npm test
+  ```
+
+- Use a separate `rock-buddy-preview` transient service for the Linux preview,
+  with the same memory/swap limits, `TasksMax=128` (Electron uses many threads),
+  and `KillMode=control-group`. Give an
+  interactive preview a longer runtime (for example eight hours). Check the unit
+  before starting; do not start another watcher to recover a slow or stalled one.
+  Stop it with `systemctl --user stop rock-buddy-preview.service`.
+- These are per-task limits, not changes to Omarchy or system-wide memory policy.
+  If systemd user services are unavailable, use an equivalent process-tree limit
+  and timeout; do not silently rerun an exhausted job without limits.
+- A normal local suite takes seconds. If it stalls or CPU/memory grows sharply,
+  inspect the process tree and stop the owned test service before retrying.
+  Test timeouts alone cannot reliably stop synchronous formatting or runaway
+  allocations; retain the enclosing memory/process limits.
+- In React tests, compare DOM presence/identity as booleans or scalar properties:
+  `assert.ok(element === null)` or `assert.ok(document.activeElement === button)`.
+  Do not pass DOM/React objects to equality assertions: failure formatting can
+  traverse their large attached object graphs. Query the specific control being
+  tested rather than assuming a whole navigation bar has no buttons.
+- After OOM or a preview crash, check resource usage and logs before restarting.
+  An Electron GPU-helper startup failure after OOM does not establish a GPU-driver
+  or Omarchy defect. Preserve uncertainty about which processes caused pressure.
+
 ## System requirements
 
 - Assume **nothing is installed**, including Git, Node, npm, Python, .NET, or a

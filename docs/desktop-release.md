@@ -192,6 +192,20 @@ A local Electron smoke run covers Search dialogs, Rank, Profile, Config, Support
 and cooldown using synthetic bridge responses. This does not replace real Windows
 gameplay, upgrade, or PayPal sandbox acceptance below.
 
+## Beta6 candidate
+
+`1.12.0-beta6` adds saved Sniffer column widths, ordering and font choices.
+Column headings stay visible at the minimum width. The header paintbrush opens
+one theme dropdown, including the custom-color editor. Live Feed, Snort and column
+controls follow each theme; verified checkmarks have stronger contrast, and your
+score row has a subtle highlight instead of the pulsing white glow.
+
+Build and publish this candidate only through the manual Beta workflow. It keeps
+the rehearsal backend, sandbox PayPal and existing Beta installation/settings.
+Windows acceptance should focus on the upgrade from beta5, retained preferences,
+column controls and a verified song while browsing other tabs. Already completed
+checks can carry forward when their implementation has not changed.
+
 ## Beta5 candidate
 
 The published test build is `1.12.0-beta5`. It restores exact Width/Height controls in
@@ -298,8 +312,14 @@ backend. Merging runs checks only; it does not build or publish an installer.
   upload. Config always rereads local settings/profile discovery; PayPal still
   checks its environment before enabling checkout.
 - On Sniffer, use Columns to hide/show table fields and restore them with Show all.
-  Confirm choices survive navigation/restart, stay separate between accounts,
-  and leave Search's leaderboard unchanged. Check both Learn a Song and Score Attack.
+  Drag header dividers to resize columns, or focus a divider and use the arrow keys.
+  Headings must stay fully visible at the minimum width, including after font changes.
+  Confirm widths and visibility survive navigation/restart, stay separate between accounts,
+  and leave Search's leaderboard unchanged. Reset widths must keep hidden columns hidden.
+  Drag column headings to reorder, or use the left/right buttons in Columns.
+  Choose a table font and confirm order/font survive restart without affecting Search.
+  Reset order must preserve widths, hidden columns and font.
+  Check both Learn a Song and Score Attack; shared columns retain their widths and order.
 - Move and resize on any page, then close immediately and reopen. Confirm exact
   size and position, including monitors left of or above the primary display.
   Repeat after logout, with maximized/minimized windows, different Windows display
