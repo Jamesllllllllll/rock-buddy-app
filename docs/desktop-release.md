@@ -201,6 +201,27 @@ A local Electron smoke run covers Search dialogs, Rank, Profile, Config, Support
 and cooldown using synthetic bridge responses. This does not replace real Windows
 gameplay, upgrade, or PayPal sandbox acceptance below.
 
+## Production-connected test candidate
+
+[Rock Buddy 1.12.0-beta.7](https://github.com/Jamesllllllllll/rock-buddy-app/releases/tag/production-beta-1.12.0-beta.7)
+is published in the fork as a separate manual download. Install
+`Rock-Buddy-1.12.0-beta.7-x64-Setup.exe` over regular Rock Buddy, not the rehearsal
+Beta. It uses production scores/accounts, live PayPal and TNT's update feed.
+Enable **Config → Advanced Config → Beta Testing** for future official prereleases.
+The next official build should use a higher version, such as `1.12.0-beta.8`.
+No official update can be tested end to end until TNT publishes that next version.
+
+[Windows build 38856113812](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38856113812)
+at `c621bb0` passed 114 tests, the native build, actual NSIS installation/startup,
+production settings preservation, production routing, TNT update-feed configuration,
+profile discovery and mockup exclusion. The installer and update manifests have
+verified checksums; public downloads are available. CI performs no production
+login, score submission or payment; real Windows gameplay and the 1.11.0 upgrade
+still require acceptance. The PR stays draft until those results are recorded.
+
+Rehearsal beta6 and its `desktop-beta/beta.yml` update feed are unchanged. Installing
+the official candidate does not transfer rehearsal scores or settings.
+
 ## Beta6 candidate
 
 The published test build `1.12.0-beta6` adds saved Sniffer column widths, ordering and font choices.
