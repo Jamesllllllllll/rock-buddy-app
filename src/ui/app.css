@@ -1,4 +1,14 @@
 /* Shared layout keeps every route inside the same document. */
+html,
+body,
+#desktop-root {
+    height: 100%;
+    overflow: hidden;
+}
+html,
+.app-shell * {
+    scrollbar-width: auto;
+}
 body {
     margin: 0;
     min-width: 400px;
@@ -6,13 +16,98 @@ body {
     color: white;
 }
 .app-shell {
-    min-height: 100vh;
-    padding: 8px 8px 64px;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    padding: 8px 8px 0;
+    overflow: hidden;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    --scrollbar-thumb: #80639b;
+    --scrollbar-track: #18181b;
+    --select-background: #272131;
+    --select-text: #eee4fb;
+    --select-border: #493b59;
+    --select-scheme: dark;
+    --header-text: #a26ede;
+    --footer-background: #222222;
+    --footer-text: #eee4fb;
+    --footer-border: #3d3347;
+    --footer-link: #b78be9;
+}
+.app-shell[data-theme="light"] {
+    --scrollbar-thumb: #8a739f;
+    --scrollbar-track: #f4f4f5;
+    --select-background: #e7e2ef;
+    --select-text: #202024;
+    --select-border: #b6abbe;
+    --select-scheme: light;
+    --header-text: #402064;
+    --footer-background: #eeebf2;
+    --footer-text: #202024;
+    --footer-border: #d6cfdf;
+    --footer-link: #402064;
+}
+.app-shell[data-theme="classic"] {
+    --scrollbar-thumb: #848584;
+    --scrollbar-track: #c6c6c6;
+    --select-background: #ffffff;
+    --select-text: #000000;
+    --select-border: #999999;
+    --select-scheme: light;
+    --header-text: #402064;
+    --footer-background: #c6c6c6;
+    --footer-text: #000000;
+    --footer-border: #fefefe;
+    --footer-link: #1034a6;
+}
+.app-shell[data-theme="streamer"] {
+    --scrollbar-thumb: color-mix(in srgb, var(--streamer-text-color) 55%, var(--streamer-color));
+    --scrollbar-track: var(--streamer-color);
+    --select-background: var(--streamer-panel-color);
+    --select-text: var(--streamer-text-color);
+    --select-border: color-mix(in srgb, var(--streamer-text-color) 30%, var(--streamer-panel-color));
+    --select-scheme: normal;
+    --header-text: var(--streamer-text-color);
+    --footer-background: var(--streamer-panel-color);
+    --footer-text: var(--streamer-text-color);
+    --footer-border: color-mix(in srgb, var(--streamer-text-color) 30%, var(--streamer-panel-color));
+    --footer-link: var(--streamer-accent-color);
+}
+/* Native menus need explicit option colors as well as a themed closed control. */
+.app-shell select {
+    background: var(--select-background);
+    color: var(--select-text);
+    border: 1px solid var(--select-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    color-scheme: var(--select-scheme);
+    text-shadow: none;
+    box-shadow: none;
+    transition: none;
+}
+.app-shell select option {
+    background: var(--select-background);
+    color: var(--select-text);
+}
+.app-shell input:where(:not([type]), [type="text"], [type="email"], [type="password"], [type="search"], [type="url"], [type="tel"], [type="number"]) {
+    padding: 6px 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    background-image: none;
+    text-shadow: none;
+    transition: none;
+}
+.app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.app-shell input:focus {
+    box-shadow: none;
 }
 .navtop {
-    /* Keep navigation and update controls above scrolling page content. */
-    position: sticky;
-    top: 0;
+    /* Navigation stays outside the content's scrolling area. */
+    position: relative;
+    flex-shrink: 0;
     z-index: 1001;
     display: flex;
     align-items: center;
@@ -20,37 +115,78 @@ body {
     gap: 5px;
     width: 100%;
 }
-.beta-badge {
-    position: relative;
-    flex-shrink: 0;
-    padding: 2px 6px;
-    border: 1px solid #a26ede;
-    border-radius: 4px;
-    color: #a26ede;
-    font: 12px/1.4 sans-serif;
+/* Override the legacy dark theme link color for each header theme. */
+.app-shell .navtop > a {
+    color: var(--header-text) !important;
 }
-.beta-details {
-    display: none;
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    z-index: 2001;
-    width: min(300px, calc(100vw - 40px));
-    padding: 8px;
-    background: #18181b;
-    border: 1px solid #a26ede;
-    color: white;
-}
-.beta-badge:hover .beta-details,
-.beta-badge:focus .beta-details {
-    display: block;
-}
-.navtop a[aria-current="page"] {
+.navtop .header-tab {
+    padding: 7px 9px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
     text-decoration: none;
+    white-space: nowrap;
+}
+.navtop .header-tab:hover {
+    background: color-mix(in srgb, var(--header-text) 10%, transparent);
+}
+.navtop .header-tab[aria-current="page"] {
+    background: color-mix(in srgb, var(--header-text) 18%, transparent);
+}
+.navtop .header-tab:focus-visible {
+    outline: 2px solid var(--header-text);
+    outline-offset: 2px;
+}
+.navtop .header-signout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 7px;
+    margin-inline-start: 4px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--header-text);
+}
+.navtop .header-signout:hover {
+    background: color-mix(in srgb, var(--header-text) 10%, transparent);
+}
+.navtop .header-signout:focus-visible {
+    outline: 2px solid var(--header-text);
+    outline-offset: 2px;
+}
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-end: 10px;
+    flex-shrink: 0;
+    color: var(--header-text);
+}
+.header-brand img {
+    display: block;
+    object-fit: contain;
+}
+.header-title {
     font-weight: bold;
+    white-space: nowrap;
+    user-select: none;
 }
 main {
-    padding-bottom: 24px;
+    padding: 12px 4px 24px 12px;
+}
+.app-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+}
+/* Dialogs scroll internally while the page underneath stays in place. */
+.app-shell:has(dialog[open]) .app-content {
+    overflow: hidden;
 }
 .page-loading-indicator {
     position: fixed;
@@ -120,6 +256,46 @@ main {
 .verification-badge {
     height: 25px;
 }
+/* Theme every button by default; specific controls can override this base style. */
+button,
+.app-shell button.btn,
+.app-shell button.btn-primary {
+    padding: 5px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: #65349b;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-shadow: none;
+    box-shadow: none;
+    filter: none;
+    cursor: pointer;
+}
+button:where(:hover:not(:disabled)),
+.app-shell button.btn:hover:not(:disabled),
+.app-shell button.btn-primary:hover:not(:disabled) {
+    background: #7743ad;
+}
+.app-shell button.btn:disabled,
+.app-shell button.btn-primary:disabled {
+    cursor: default;
+}
+.search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.search-form input {
+    margin-bottom: 0;
+    min-width: 0;
+}
+.profile-twitch-form > button {
+    margin-inline-start: 10px;
+}
 .text-button {
     background: none;
     border: none;
@@ -168,12 +344,23 @@ fieldset {
     margin: 40px auto;
     text-align: center;
 }
-.account-fields p {
-    display: flex;
-    gap: 16px;
+.account-fields {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 16px 24px;
+    max-width: 560px;
+    margin: 24px 0;
+    align-items: baseline;
 }
-.account-fields span {
-    min-width: 180px;
+.account-fields dd {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 16px;
+    margin: 0;
+}
+.account-fields dd span {
+    overflow-wrap: anywhere;
 }
 .stats {
     display: flex;
@@ -193,6 +380,7 @@ fieldset {
 .app-dialog {
     color: inherit;
     background: #18181b;
+    scrollbar-color: #80639b #18181b;
     border: 1px solid #50415f;
     border-radius: 8px;
     width: min(1000px, 95vw);
@@ -206,12 +394,28 @@ fieldset {
     background: none;
     border: 0;
 }
-footer {
+.app-shell > footer {
+    position: relative;
+    inset: auto;
+    flex-shrink: 0;
+    margin-inline: -8px;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     padding: 0 12px;
     box-sizing: border-box;
+    background: var(--footer-background);
+    color: var(--footer-text);
+    border-top: 1px solid var(--footer-border);
+}
+.app-shell > footer p {
+    color: inherit;
+}
+.app-shell > footer a {
+    color: var(--footer-link) !important;
+}
+.app-shell > footer .desktop-version:hover {
+    color: var(--footer-link);
 }
 .desktop-version {
     display: flex;
@@ -256,6 +460,7 @@ footer {
     flex-shrink: 0;
 }
 .changelog-controls button {
+    display: grid;
     padding: 6px 10px;
     border: 1px solid #a26ede;
     border-radius: 4px;
@@ -264,16 +469,30 @@ footer {
     font: inherit;
     cursor: pointer;
 }
+
+/* Both labels reserve space so checking never changes the button size. */
+.changelog-controls button > span {
+    grid-area: 1 / 1;
+}
+.changelog-controls button > span[aria-hidden="true"] {
+    visibility: hidden;
+}
 .changelog-controls button:hover:not(:disabled) {
     background: #49305f;
 }
 .changelog-controls [role="status"] {
     font-size: 12px;
 }
+.changelog-update-hint {
+    flex-basis: 100%;
+    color: #bcb4c7;
+    font-size: 12px;
+}
 /* Only the notes scroll; the title, close button and update check stay visible. */
 .changelog-content {
     min-height: 0;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
     padding: 0 20px 20px;
     outline-offset: -3px;
@@ -372,16 +591,19 @@ footer {
     opacity: 0.6;
 }
 @media (max-width: 720px) {
-    footer {
-        grid-template-columns: 1fr;
+    .app-shell > footer {
+        grid-template-columns: 1fr auto;
         padding-top: 8px;
     }
     footer > p {
-        margin-right: 48px;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin: 8px 0;
         font-size: 12px;
     }
-    .app-shell {
-        padding-bottom: 96px;
+    footer .team-link {
+        grid-column: 2;
+        grid-row: 1;
     }
 }
 .rank-grid {
@@ -465,12 +687,11 @@ footer {
 .config-custom-sound {
     flex: 1 1 160px;
 }
-.config-page input:not([type="checkbox"]):not([type="color"]),
-.config-page select {
-    padding: 4px 6px;
+.config-page input:not([type="checkbox"]):not([type="color"]) {
     margin: 0;
-    font-size: 13px;
-    line-height: 1.3;
+}
+.config-page select {
+    margin: 0;
 }
 .config-address > label {
     gap: 10px;
@@ -521,11 +742,56 @@ footer {
 .theme-controls input {
     width: 40px;
 }
+.theme-controls select {
+    margin-inline-start: 6px;
+}
+.custom-theme-dialog {
+    width: min(440px, calc(100vw - 48px));
+    max-height: calc(100dvh - 48px);
+    overflow: auto;
+    text-align: left;
+}
+.custom-theme-dialog h2 {
+    margin: 0 40px 24px 0;
+}
+.custom-theme-fields {
+    display: grid;
+    gap: 16px;
+}
+.custom-theme-color {
+    display: grid;
+    grid-template-columns: 1fr auto 44px;
+    align-items: center;
+    gap: 12px;
+}
+.custom-theme-color code {
+    font-size: 13px;
+}
+.custom-theme-color input[type="color"] {
+    width: 44px;
+    height: 32px;
+    padding: 3px;
+    margin: 0;
+    background: transparent;
+    border: 1px solid var(--select-border);
+    box-shadow: none;
+    cursor: pointer;
+}
+.custom-theme-corners {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.custom-theme-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 24px;
+}
 .team-link {
-    position: fixed;
-    bottom: 10px;
-    right: 12px;
-    z-index: 1000;
+    grid-column: 3;
+    justify-self: end;
 }
 table {
     font-family: "Roboto Mono", monospace;

@@ -18,19 +18,23 @@ export function AccountPage() {
             <h1>Account</h1>
             <AsyncState {...account} retry={account.reload} />
             {account.data && (
-                <div className="account-fields">
-                    <p>
-                        Username: <span>{account.data.username}</span>{' '}
-                        <Link to="/account/username">Change</Link>
-                    </p>
-                    <p>
-                        Email: <span>{account.data.email}</span>{' '}
-                        <Link to="/account/email">Change</Link>
-                    </p>
-                    <p>
-                        Password: <span>******</span> <Link to="/account/password">Change</Link>
-                    </p>
-                </div>
+                <dl className="account-fields">
+                    <dt>Username</dt>
+                    <dd>
+                        <span>{account.data.username}</span>
+                        <Link to="/account/username" aria-label="Change username">Change</Link>
+                    </dd>
+                    <dt>Email</dt>
+                    <dd>
+                        <span>{account.data.email}</span>
+                        <Link to="/account/email" aria-label="Change email">Change</Link>
+                    </dd>
+                    <dt>Password</dt>
+                    <dd>
+                        <span>******</span>
+                        <Link to="/account/password" aria-label="Change password">Change</Link>
+                    </dd>
+                </dl>
             )}
             <button
                 className="btn-primary"

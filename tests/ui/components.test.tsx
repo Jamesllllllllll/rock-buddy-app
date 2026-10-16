@@ -116,7 +116,7 @@ test('ready updates require a choice, Later can reopen, and late snapshots canno
     // The same ready event stays dismissed; a different version asks again.
     updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
     assert.equal(screen.queryByRole('alertdialog'), null);
-    updates.emit({ status: 'ready', version: '1.12.0-beta3', message: 'Update ready.' });
+    updates.emit({ status: 'ready', version: '1.12.0-beta4', message: 'Update ready.' });
     assert.ok(screen.getByRole('alertdialog'));
 });
 
@@ -153,7 +153,7 @@ test('header shows download progress and deferred updates while automatic checks
     updates.emit({ status: 'downloading' });
     assert.equal(screen.getByRole('status').textContent, 'Downloading…');
 
-    updates.emit({ status: 'ready', version: '1.12.0-beta3', message: 'Update ready.' });
+    updates.emit({ status: 'ready', version: '1.12.0-beta4', message: 'Update ready.' });
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
     const ready = screen.getByRole('button', { name: 'Update ready' });
     assert.ok(ready.closest('nav'));
@@ -169,9 +169,7 @@ test('header navigates inside React and updates the active link', async () => {
             <AppHeader />
         </MemoryRouter>,
     );
-    await waitFor(() => assert.ok(screen.getByText('Beta')));
-    assert.equal(screen.getByText('Beta').closest('nav')?.getAttribute('aria-label'), 'Main navigation');
-    assert.equal(screen.getByText('Beta').getAttribute('aria-describedby'), 'beta-details');
+    assert.equal(screen.queryByText('Beta'), null);
     assert.equal(screen.getByRole('link', { name: 'Search' }).getAttribute('aria-current'), 'page');
     fireEvent.click(screen.getByRole('link', { name: 'Support' }));
     await waitFor(() =>
@@ -193,7 +191,7 @@ test('support derives validation from the amount and does not create checkout in
     });
     render(
         <StrictMode>
-            <SupportPage onBack={() => {}} />
+            <SupportPage />
         </StrictMode>,
     );
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
@@ -220,7 +218,7 @@ test('checkout prevents duplicate submissions and requires explicit approval-ope
             return response.promise;
         },
     });
-    render(<SupportPage onBack={() => {}} />);
+    render(<SupportPage />);
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(button.disabled, false));
     fireEvent.click(screen.getByRole('radio', { name: 'Monthly' }));
@@ -243,7 +241,7 @@ test('successful browser opening asks for approval without claiming a completed 
         supportInfo: async () => ({ sandbox: false }),
         startSupportCheckout: async () => ({ opened: true }),
     });
-    render(<SupportPage onBack={() => {}} />);
+    render(<SupportPage />);
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(button.disabled, false));
     assert.equal(screen.queryByText(/PayPal sandbox/), null);
@@ -262,7 +260,7 @@ test('unavailable support stays disabled and reports the error', async () => {
             throw new Error('Unavailable');
         },
     });
-    render(<SupportPage onBack={() => {}} />);
+    render(<SupportPage />);
     await waitFor(() =>
         assert.match(screen.getByRole('status').textContent || '', /Support is unavailable/),
     );
@@ -333,19 +331,19 @@ test('restart stays guarded while pending and can recover from blocked or failed
 
 test('the version opens bundled current and historical release notes without network access', async () => {
     setApi({
-        getVersion: async () => '1.12.0-beta3',
+        getVersion: async () => '1.12.0-beta4',
         getUpdateState: async () => ({ status: 'disabled', message: 'Updates are available in installed Windows builds.' }),
         onUpdateState: () => () => {},
     });
     render(<Footer><DesktopVersion /></Footer>);
-    const version = await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta3' });
+    const version = await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta4' });
     assert.equal(screen.queryByRole('dialog'), null);
 
     fireEvent.click(version);
     const dialog = screen.getByRole('dialog', { name: 'Changelog' });
     assert.equal((dialog as HTMLDialogElement).open, true);
     assert.equal(document.documentElement.style.overflow, 'hidden');
-    assert.ok(within(dialog).getByRole('heading', { name: 'v1.12.0-beta3' }));
+    assert.ok(within(dialog).getByRole('heading', { name: 'v1.12.0-beta4' }));
     assert.ok(within(dialog).getByRole('heading', { name: 'v1.11.0' }));
     assert.ok(within(dialog).getByText('Added Rocksmith Learn & Play Edition compatibility.'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
@@ -363,13 +361,13 @@ test('changelog checks report results and failures without duplicate requests or
     const response = deferred<any>();
     let checks = 0;
     setApi({
-        getVersion: async () => '1.12.0-beta3',
+        getVersion: async () => '1.12.0-beta4',
         getUpdateState: updates.get,
         onUpdateState: updates.subscribe,
         checkDesktopUpdate: async () => { checks++; return response.promise; },
     });
     render(<DesktopVersion />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta3' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta4' }));
     const check = await screen.findByRole('button', { name: 'Check for updates' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(check.disabled, false));
 

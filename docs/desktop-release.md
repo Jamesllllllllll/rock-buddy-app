@@ -134,8 +134,8 @@ The existing Beta app identity, installation directory, settings and session are
 preserved. Close normal Rock Buddy before gameplay. A source launch can use
 `npm run start:beta`; building/running RockSniffer requires native Windows x64.
 Local mode is available separately and does not contain the imported database.
-The navigation header shows a small Beta badge; hovering or focusing it reveals
-the reminder that test changes will be discarded.
+The navigation header has no Beta badge. Test builds still use the separate Beta
+installation, rehearsal backend and test update feed; test changes are discarded.
 
 The Support header link opens a bundled desktop page with one-time/monthly choices and
 an amount in USD. Values below $5 disable checkout. No iframe or remote page is
@@ -191,6 +191,20 @@ stopping in-flight reader work, and history-import/verified-score separation.
 A local Electron smoke run covers Search dialogs, Rank, Profile, Config, Support,
 and cooldown using synthetic bridge responses. This does not replace real Windows
 gameplay, upgrade, or PayPal sandbox acceptance below.
+
+## Beta4 candidate
+
+The next test build is `1.12.0-beta4`. It includes the refreshed theme styles,
+a Custom theme dialog that stays readable regardless of selected colors, header
+sign-in/sign-out controls, and fixed header/footer placement around the scrolling
+page content. Config saves keep unrelated controls enabled. The header Beta badge
+is removed; the installation, rehearsal backend and update feed remain separate.
+
+Keep beta3 installed to test the automatic upgrade to beta4. Confirm Restart later,
+Restart now, retained login/settings/theme, and a verified score after upgrading.
+Also test quick Config edits and restart persistence, narrow windows/dialogs,
+background gameplay across tabs, account/profile switching, and connection recovery.
+This candidate is not approval to merge or publish the production release.
 
 ## Automatic updates
 

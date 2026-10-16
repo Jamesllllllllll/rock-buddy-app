@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../ui/Session';
 import { useResource } from '../ui/useResource';
 import { useAction } from '../ui/useAction';
@@ -6,6 +6,7 @@ import { AsyncState } from '../ui/AsyncState';
 import { Modal } from '../ui/Modal';
 import { ThemeControls } from '../ui/Theme';
 import { useQueryClient } from '@tanstack/react-query';
+import { errorMessage } from '../ui/api';
 
 const defaults = {
     always_sniff: false,
@@ -64,17 +65,42 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
     const client = useQueryClient();
     const action = useAction();
     const [settings, setSettings] = useState(initial.settings);
+    const currentSettings = useRef(initial.settings);
+    const saveQueue = useRef(Promise.resolve());
+    const mounted = useRef(true);
+    const [saveError, setSaveError] = useState<string>();
+    const [pendingSaves, setPendingSaves] = useState(0);
     const [popup, setPopup] = useState<'reader' | 'advanced'>();
     const prefix = `user_data.${auth.user_id}.`;
 
+    useEffect(() => {
+        mounted.current = true;
+        return () => { mounted.current = false; };
+    }, []);
+
+    function showSettings(next: Settings) {
+        currentSettings.current = next;
+        if (mounted.current) setSettings(next);
+    }
+
     async function save<K extends keyof Settings>(key: K, value: Settings[K]) {
-        const next = { ...settings, [key]: value };
-        await window.api.storeSet(prefix + key, value);
-        if (key === 'use_external_rocksniffer' && value) {
-            next.lurk_mode = true;
-            await window.api.storeSet(prefix + 'lurk_mode', true);
+        const previous = currentSettings.current;
+        let next = { ...previous, [key]: value };
+
+        // Show the edit immediately without dimming every other control.
+        showSettings(next);
+        try {
+            await window.api.storeSet(prefix + key, value);
+        } catch (failure) {
+            showSettings(previous);
+            throw failure;
         }
-        setSettings(next);
+
+        if (key === 'use_external_rocksniffer' && value) {
+            await window.api.storeSet(prefix + 'lurk_mode', true);
+            next = { ...next, lurk_mode: true };
+            showSettings(next);
+        }
 
         // Cached chart filters include the preferred path as well as available arrangements.
         if (key === 'preferred_path') {
@@ -94,7 +120,21 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
     }
 
     function change<K extends keyof Settings>(key: K, value: Settings[K]) {
-        void action.run(() => save(key, value));
+        setPendingSaves(count => count + 1);
+
+        // Apply quick edits in order so one save cannot overwrite a newer setting.
+        saveQueue.current = saveQueue.current.then(async () => {
+            if (!mounted.current) return;
+            setSaveError(undefined);
+
+            try {
+                await save(key, value);
+            } catch (failure) {
+                if (mounted.current) setSaveError(errorMessage(failure));
+            } finally {
+                if (mounted.current) setPendingSaves(count => count - 1);
+            }
+        });
     }
 
     function checkbox(key: BooleanSetting, label: string, disabled = false) {
@@ -154,6 +194,8 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
         key: 'steam_user_data_path' | 'custom_miss_sfx_path' | 'custom_miss_sfx_multi_path',
     ) {
         void action.run(async () => {
+            await saveQueue.current;
+            if (!mounted.current) return;
             const path =
                 key === 'custom_miss_sfx_path'
                     ? await window.api.getSFXFilePath(settings[key])
@@ -171,6 +213,8 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
     function chooseProfile(key: 'steam_profile' | 'rocksmith_profile', value: string) {
         if (!value) return;
         void action.run(async () => {
+            await saveQueue.current;
+            if (!mounted.current) return;
             await save(key, value);
             if (key === 'steam_profile') await window.api.storeDelete(prefix + 'rocksmith_profile');
             reload();
@@ -179,8 +223,8 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
 
     return (
         <>
-            <AsyncState error={action.error} />
-            <fieldset disabled={action.pending}>
+            <AsyncState error={action.error || saveError} />
+            <fieldset disabled={action.pending} aria-busy={pendingSaves > 0}>
                 <div className="config-row">
                     <strong>Steam User Data Path:</strong>
                     <span className="config-path" title={settings.steam_user_data_path}>
@@ -306,7 +350,7 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                     title={popup === 'reader' ? 'RockSniffer Config' : 'Advanced Config'}
                     onClose={() => setPopup(undefined)}
                 >
-                    <fieldset disabled={action.pending}>
+                    <fieldset disabled={action.pending} aria-busy={pendingSaves > 0}>
                         {popup === 'reader' ? (
                             <>
                                 <p>Restart Rock Buddy for reader settings to take effect.</p>
@@ -321,7 +365,7 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                         ) : (
                             checkbox('beta_testing', 'Beta Testing')
                         )}
-                        <AsyncState error={action.error} />
+                        <AsyncState error={action.error || saveError} />
                     </fieldset>
                 </Modal>
             )}

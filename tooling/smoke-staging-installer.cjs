@@ -102,7 +102,7 @@ const product = beta ? 'Beta' : 'Staging';
         assert.equal(response.result.result.value.hasLogin, true);
         assert.ok(response.result.result.value.bridgeProbe.error);
         if (beta) {
-            assert.match(response.result.result.value.notice, /Rock Buddy Beta.*will be discarded/);
+            assert.equal(response.result.result.value.notice, undefined, 'The header no longer shows a Beta badge');
             const windowTitle = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
                 `(Get-Process -Id ${child.pid}).MainWindowTitle`], { encoding: 'utf8' });
             assert.match(windowTitle.stdout, /Rock Buddy Beta v\d+\.\d+\.\d+-beta\d+/);

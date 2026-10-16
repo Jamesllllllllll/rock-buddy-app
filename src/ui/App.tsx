@@ -1,8 +1,8 @@
-import { Component, useEffect, type ReactNode } from 'react';
+import { Component, useEffect, useRef, type ReactNode } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { SessionProvider, useSession, useAuth } from './Session';
 import { ThemeProvider } from './Theme';
-import { AppHeader } from './AppHeader';
+import { AppHeader, HeaderAccount } from './AppHeader';
 import { DesktopStatus } from './DesktopStatus';
 import { DesktopUpdates, DesktopVersion } from './DesktopUpdates';
 import { Footer } from './Footer';
@@ -91,14 +91,18 @@ function SessionRuntime({ children }: { children: ReactNode }) {
     );
 }
 
-function SupportRoute() {
-    const navigate = useNavigate();
-    return <SupportPage onBack={() => navigate(-1)} />;
-}
-
 function Shell() {
     const { state, refresh, logout } = useSession();
     const location = useLocation();
+    const content = useRef<HTMLDivElement>(null);
+
+    // New pages start at the top; refreshing data does not move the current page.
+    useEffect(() => {
+        if (!content.current) return;
+        content.current.scrollTop = 0;
+        content.current.scrollLeft = 0;
+    }, [location.pathname]);
+
     useEffect(() => {
         let mounted = true;
         void window.api.getVersion().then((version) => {
@@ -116,80 +120,82 @@ function Shell() {
             <DesktopStatus />
             <AppHeader compact={state.status !== 'ready'}>
                 <DesktopUpdates />
+                <HeaderAccount />
             </AppHeader>
-            {initial ? (
-                <main>
-                    <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading...'}</p>
-                    {state.error && (
-                        <>
-                            <button onClick={() => void refresh()}>Retry</button>
-                            <button onClick={() => void logout()}>Log in again</button>
-                        </>
-                    )}
-                </main>
-            ) : (
-                <SessionRuntime>
-                    <ScreenBoundary route={location.pathname}>
-                        <Routes>
-                            <Route path="/login" element={<AuthPage key="login" />} />
-                            <Route path="/signup" element={<AuthPage key="signup" signup />} />
-                            <Route path="/support" element={<SupportRoute />} />
-                            <Route path="/team" element={<TeamPage />} />
-                            <Route element={<AccountAccess />}>
+            <div className="app-content" ref={content}>
+                {initial ? (
+                    <main>
+                        <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading...'}</p>
+                        {state.error && (
+                            <>
+                                <button onClick={() => void refresh()}>Retry</button>
+                                <button onClick={() => void logout()}>Log in again</button>
+                            </>
+                        )}
+                    </main>
+                ) : (
+                    <SessionRuntime>
+                        <ScreenBoundary route={location.pathname}>
+                            <Routes>
+                                <Route path="/login" element={<AuthPage key="login" />} />
+                                <Route path="/signup" element={<AuthPage key="signup" signup />} />
+                                <Route path="/support" element={<SupportPage />} />
+                                <Route path="/team" element={<TeamPage />} />
+                                <Route element={<AccountAccess />}>
+                                    <Route
+                                        path="/activation"
+                                        element={
+                                            state.status === 'ready' ? (
+                                                <Navigate to="/sniffer" replace />
+                                            ) : (
+                                                <ActivationPage />
+                                            )
+                                        }
+                                    />
+                                    <Route
+                                        path="/account/email"
+                                        element={<ChangeAccountPage key="email" field="email" />}
+                                    />
+                                </Route>
+                                <Route element={<ProtectedScreens />}>
+                                    <Route path="/sniffer" element={<SnifferPage />} />
+                                    <Route path="/search" element={<SearchPage />} />
+                                    <Route path="/rank" element={<RankPage />} />
+                                    <Route path="/profile" element={<ProfilePage />} />
+                                    <Route path="/config" element={<ConfigPage />} />
+                                    <Route path="/account" element={<AccountPage />} />
+                                    <Route
+                                        path="/account/username"
+                                        element={<ChangeAccountPage key="username" field="username" />}
+                                    />
+                                    <Route
+                                        path="/account/password"
+                                        element={<ChangeAccountPage key="password" field="password" />}
+                                    />
+                                </Route>
                                 <Route
-                                    path="/activation"
+                                    path="*"
                                     element={
-                                        state.status === 'ready' ? (
-                                            <Navigate to="/sniffer" replace />
-                                        ) : (
-                                            <ActivationPage />
-                                        )
+                                        <Navigate
+                                            to={
+                                                state.status === 'ready'
+                                                    ? '/sniffer'
+                                                    : state.status === 'activation'
+                                                      ? '/activation'
+                                                      : '/login'
+                                            }
+                                            replace
+                                        />
                                     }
                                 />
-                                <Route
-                                    path="/account/email"
-                                    element={<ChangeAccountPage key="email" field="email" />}
-                                />
-                            </Route>
-                            <Route element={<ProtectedScreens />}>
-                                <Route path="/sniffer" element={<SnifferPage />} />
-                                <Route path="/search" element={<SearchPage />} />
-                                <Route path="/rank" element={<RankPage />} />
-                                <Route path="/profile" element={<ProfilePage />} />
-                                <Route path="/config" element={<ConfigPage />} />
-                                <Route path="/account" element={<AccountPage />} />
-                                <Route
-                                    path="/account/username"
-                                    element={<ChangeAccountPage key="username" field="username" />}
-                                />
-                                <Route
-                                    path="/account/password"
-                                    element={<ChangeAccountPage key="password" field="password" />}
-                                />
-                            </Route>
-                            <Route
-                                path="*"
-                                element={
-                                    <Navigate
-                                        to={
-                                            state.status === 'ready'
-                                                ? '/sniffer'
-                                                : state.status === 'activation'
-                                                  ? '/activation'
-                                                  : '/login'
-                                        }
-                                        replace
-                                    />
-                                }
-                            />
-                        </Routes>
-                    </ScreenBoundary>
-                </SessionRuntime>
-            )}
-            <Footer><DesktopVersion /></Footer>
-            <div className="team-link">
-                <Link to="/team">Team</Link>
+                            </Routes>
+                        </ScreenBoundary>
+                    </SessionRuntime>
+                )}
             </div>
+            <Footer links={<Link className="team-link" to="/team">Team</Link>}>
+                <DesktopVersion />
+            </Footer>
             <BoulderBro />
         </ThemeProvider>
     );

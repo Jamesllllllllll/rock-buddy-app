@@ -25,7 +25,7 @@ function SnifferView({ engine }: { engine: Sniffer }) {
               : 'unverified';
 
     return (
-        <>
+        <main>
             <div className="page-heading">
                 <h1>Sniffer</h1>
                 <span role="status">{state.status}</span>
@@ -142,27 +142,24 @@ function SnifferView({ engine }: { engine: Sniffer }) {
                     </p>
                 </Modal>
             )}
-        </>
+        </main>
     );
 }
 
 export function SnifferPage() {
     const auth = useAuth();
     const { engine, error, retry } = useGameplay();
+
+    if (engine) return <SnifferView key={auth.user_id} engine={engine} />;
+
     return (
         <main>
-            {engine ? (
-                <SnifferView key={auth.user_id} engine={engine} />
-            ) : (
-                <>
-                    <h1>Sniffer</h1>
-                    <AsyncState loading={!error} error={error} retry={retry} />
-                    {error && (
-                        <p>
-                            <Link to="/config">Config</Link>
-                        </p>
-                    )}
-                </>
+            <h1>Sniffer</h1>
+            <AsyncState loading={!error} error={error} retry={retry} />
+            {error && (
+                <p>
+                    <Link to="/config">Config</Link>
+                </p>
             )}
         </main>
     );

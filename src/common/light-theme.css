@@ -95,3 +95,55 @@ body, body p, h1, h2, h3, label { color: #202024; }
 body { background: #f4f4f5; }
 input, select { color: #202024; background: #e7e2ef; }
 .card, .card h1, .card p { color: white; }
+
+/* Keep ranking panels light instead of inheriting the dark theme's gray fill. */
+.app-shell[data-theme="light"] :is(.rank, .king, .expand-button) {
+    background: #eeebf2;
+    border-color: #d6cfdf;
+    color: #202024;
+}
+
+.app-shell[data-theme="light"] .expand-button:hover {
+    background: #e4ddec;
+    border-color: #b9a9cb;
+}
+
+.app-shell[data-theme="light"] #disclaimer {
+    color: #635a6d;
+}
+
+/* Support uses the same pale surfaces and dark text as the rest of Light mode. */
+.app-shell[data-theme="light"] .frequency span {
+    background: #eeebf2;
+    border-color: #d6cfdf;
+    color: #202024;
+}
+
+.app-shell[data-theme="light"] .frequency input:checked + span {
+    background: #e4ddec;
+    border-color: #9a7bbd;
+    color: #402064;
+}
+
+.app-shell[data-theme="light"] #support-amount {
+    background: #e7e2ef;
+    border-color: #b6abbe;
+    color: #202024;
+}
+
+.app-shell[data-theme="light"] .support-page .text-button {
+    color: #402064;
+}
+
+.app-shell[data-theme="light"] .support-page :is(.muted, .sandbox-note) {
+    color: #635a6d;
+}
+
+.app-shell[data-theme="light"] #support-status.error {
+    color: #9b1515;
+}
+
+.app-shell[data-theme="light"] .support-page :is(button, input):focus-visible,
+.app-shell[data-theme="light"] .frequency input:focus-visible + span {
+    outline-color: #65349b;
+}

@@ -155,6 +155,7 @@ export function SearchPage() {
         <main>
             <h1>Search</h1>
             <form
+                className="search-form"
                 onSubmit={(event) => {
                     event.preventDefault();
                     const query = search.input.trim();

@@ -1,6 +1,6 @@
 /* Keep checkout in the same black and purple palette as the desktop. */
 body { min-width: 0; height: auto; }
-.support-page { max-width: 480px; margin: 56px auto 90px; padding: 0 24px; }
+.support-page { max-width: 480px; margin: 56px auto 90px; }
 .support-page h1 { margin: 24px 0 32px; font-size: 28px; text-align: left; }
 .support-page button, .support-page input { font: inherit; }
 .support-page button { cursor: pointer; }

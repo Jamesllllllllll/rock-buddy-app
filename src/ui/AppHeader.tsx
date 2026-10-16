@@ -1,24 +1,62 @@
-import { Fragment, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { BetaBadge } from './BetaBadge';
+import { useSession } from './Session';
 
 const pages = ['Sniffer', 'Search', 'Rank', 'Profile', 'Config', 'Account', 'Support'];
+
+// Offer a way back to login on public pages, or sign out of the current session.
+export function HeaderAccount() {
+    const { state, logout } = useSession();
+    const signingOut = useRef(false);
+
+    async function signOut() {
+        if (signingOut.current) return;
+        signingOut.current = true;
+
+        try {
+            await logout();
+        } catch {
+            // The session has already closed, so report storage failures outside that screen.
+            window.api.error('You are signed out, but Rock Buddy could not remove your saved login. It may sign you in again when reopened.');
+        } finally {
+            signingOut.current = false;
+        }
+    }
+
+    if (state.status === 'signed-out') {
+        return <NavLink className="header-tab" to="/login">Sign in</NavLink>;
+    }
+
+    if (!state.auth) return null;
+
+    return (
+        <button className="header-signout" type="button" aria-label="Sign out" title="Sign out"
+            onClick={() => void signOut()}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 5H4v14h5M10 12h11m-4-4 4 4-4 4" />
+            </svg>
+        </button>
+    );
+}
 
 export function AppHeader({ compact = false, children }: { compact?: boolean; children?: ReactNode }) {
     const links = compact ? ['Support'] : pages;
     return (
         <nav className="navtop" aria-label="Main navigation">
-            <BetaBadge />
-            {links.map((name, index) => (
-                <Fragment key={name}>
-                    {index > 0 && name !== 'Config' && <span aria-hidden="true">|</span>}
-                    <NavLink
-                        to={`/${name.toLowerCase()}`}
-                        style={name === 'Config' || compact ? { marginLeft: 'auto' } : undefined}
-                    >
-                        {name}
-                    </NavLink>
-                </Fragment>
+            <div className="header-brand">
+                <img src="../images/icon-256x256.png" width={28} height={28} alt="" />
+                <span className="header-title">Rock Buddy</span>
+            </div>
+            {links.map((name) => (
+                <NavLink
+                    key={name}
+                    className="header-tab"
+                    to={`/${name.toLowerCase()}`}
+                    style={name === 'Config' || compact ? { marginLeft: 'auto' } : undefined}
+                >
+                    {name}
+                </NavLink>
             ))}
             {children}
         </nav>

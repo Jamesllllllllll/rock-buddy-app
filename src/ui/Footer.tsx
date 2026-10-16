@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 // Keep the year current even when a window stays open across New Year's midnight.
-export function Footer({ children }: { children?: ReactNode }) {
+export function Footer({ children, links }: { children?: ReactNode; links?: ReactNode }) {
     const [year, setYear] = useState(() => new Date().getFullYear());
 
     useEffect(() => {
@@ -19,6 +19,7 @@ export function Footer({ children }: { children?: ReactNode }) {
         <footer>
             {children}
             <p>Copyright &copy; {year} TNTMusicStudios</p>
+            {links}
         </footer>
     );
 }

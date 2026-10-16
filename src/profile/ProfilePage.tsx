@@ -30,6 +30,7 @@ function TwitchForm({ profile, onSaved }: {
 
     return (
         <form
+            className="profile-twitch-form"
             onSubmit={(event) => {
                 event.preventDefault();
                 void action.run(async () => {

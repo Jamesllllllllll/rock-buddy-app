@@ -6,7 +6,7 @@ type CheckoutState =
     | { status: 'error'; message: string };
 
 // Keep the support form inside the app and leave PayPal approval to the browser.
-export function SupportPage({ onBack }: { onBack: () => void }) {
+export function SupportPage() {
     const [checkoutSession] = useState(() => crypto.randomUUID());
     const [amount, setAmount] = useState('5');
     const [kind, setKind] = useState<'once' | 'monthly'>('once');
@@ -68,7 +68,6 @@ export function SupportPage({ onBack }: { onBack: () => void }) {
 
     return (
         <main className="support-page">
-            <button type="button" id="support-back" className="text-button" onClick={onBack}>← Back</button>
             <h1>Support Rock Buddy</h1>
             {environment?.sandbox && <p id="sandbox-note" className="sandbox-note">PayPal sandbox · No real payments</p>}
 

@@ -129,6 +129,117 @@ test('account cooldown disables the React form while older responses remain usab
     }
 });
 
+test('config saves quick edits in order without disabling unrelated controls', async () => {
+    const { stored } = mockApi();
+    window.api.resolveRocksmithConfig = async () => {};
+    let finishFirst!: () => void;
+    const firstSave = new Promise<void>(resolve => { finishFirst = resolve; });
+    const writes: [string, unknown][] = [];
+    window.api.storeSet = async (key, value) => {
+        writes.push([key, value]);
+        if (writes.length === 1) await firstSave;
+        stored.set(key, value);
+    };
+    render(<MemoryRouter initialEntries={['/config']}><App /></MemoryRouter>);
+    const always = await screen.findByRole('checkbox', { name: 'Always Sniff' });
+    const logging = screen.getByRole('checkbox', { name: 'Extra Logging' });
+
+    fireEvent.click(always);
+    await waitFor(() => assert.equal(writes.length, 1));
+    assert.equal((always as HTMLInputElement).checked, true);
+    assert.equal(logging.matches(':disabled'), false);
+    assert.equal(screen.getByRole('button', { name: 'Advanced Config' }).matches(':disabled'), false);
+
+    fireEvent.click(logging);
+    fireEvent.click(always);
+    assert.equal(writes.length, 1);
+    await act(async () => { finishFirst(); await firstSave; });
+    await waitFor(() => assert.equal(writes.length, 3));
+    assert.deepEqual(writes, [
+        ['user_data.1.always_sniff', true],
+        ['user_data.1.extra_logging', true],
+        ['user_data.1.always_sniff', false],
+    ]);
+    assert.equal((always as HTMLInputElement).checked, false);
+    assert.equal((logging as HTMLInputElement).checked, true);
+    assert.equal(stored.get('user_data.1.always_sniff'), false);
+    assert.equal(stored.get('user_data.1.extra_logging'), true);
+});
+
+test('a failed config save restores its value and does not block the next edit', async () => {
+    const { stored } = mockApi();
+    window.api.resolveRocksmithConfig = async () => {};
+    let attempts = 0;
+    window.api.storeSet = async (key, value) => {
+        if (++attempts === 1) throw new Error('Could not save setting');
+        stored.set(key, value);
+    };
+    render(<MemoryRouter initialEntries={['/config']}><App /></MemoryRouter>);
+    const logging = await screen.findByRole('checkbox', { name: 'Extra Logging' });
+    fireEvent.click(logging);
+    await screen.findByText('Could not save setting');
+    assert.equal((logging as HTMLInputElement).checked, false);
+    assert.equal(logging.matches(':disabled'), false);
+
+    fireEvent.click(logging);
+    await waitFor(() => assert.equal(stored.get('user_data.1.extra_logging'), true));
+    assert.equal((logging as HTMLInputElement).checked, true);
+    assert.equal(screen.queryByText('Could not save setting'), null);
+});
+
+test('header sign out clears the session and offers sign in from Support', async () => {
+    const { stored } = mockApi();
+    render(
+        <MemoryRouter initialEntries={['/support']}>
+            <App />
+        </MemoryRouter>,
+    );
+    const signOut = await screen.findByRole('button', { name: 'Sign out' });
+    assert.equal(signOut.getAttribute('title'), 'Sign out');
+    assert.ok(signOut.closest('nav'));
+    assert.equal(screen.queryByRole('link', { name: 'Sign in' }), null);
+
+    fireEvent.click(signOut);
+    const signIn = await screen.findByRole('link', { name: 'Sign in' });
+    assert.equal(stored.has('auth_data'), false);
+    assert.equal(sessionStorage.getItem('auth_data'), null);
+    assert.equal(screen.queryByRole('button', { name: 'Sign out' }), null);
+    assert.ok(screen.getByRole('heading', { name: 'Support Rock Buddy' }));
+
+    fireEvent.click(signIn);
+    await screen.findByRole('button', { name: 'Log In' });
+});
+
+test('a signed-out visitor can navigate from Support back to login', async () => {
+    const { stored } = mockApi();
+    stored.delete('auth_data');
+    render(
+        <MemoryRouter initialEntries={['/support']}>
+            <App />
+        </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('link', { name: 'Sign in' }));
+    await screen.findByRole('textbox', { name: 'Username or email' });
+    assert.equal(screen.queryByRole('button', { name: 'Sign out' }), null);
+});
+
+test('header logout reports saved-login deletion failures after the session closes', async () => {
+    mockApi();
+    const errors: string[] = [];
+    window.api.storeDelete = async () => { throw new Error('Storage unavailable'); };
+    window.api.error = message => { errors.push(message); };
+    render(
+        <MemoryRouter initialEntries={['/support']}>
+            <App />
+        </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await screen.findByRole('link', { name: 'Sign in' });
+    await waitFor(() => assert.equal(errors.length, 1));
+    assert.match(errors[0], /could not remove your saved login/);
+    assert.equal(sessionStorage.getItem('auth_data'), null);
+});
+
 test('a late resource response cannot overwrite a new account or song selection', async () => {
     let finish!: (value: string) => void;
     const first = new Promise<string>((resolve) => {
