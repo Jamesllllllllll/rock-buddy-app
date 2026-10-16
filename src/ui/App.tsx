@@ -4,7 +4,7 @@ import { SessionProvider, useSession, useAuth } from './Session';
 import { ThemeProvider } from './Theme';
 import { AppHeader } from './AppHeader';
 import { DesktopStatus } from './DesktopStatus';
-import { DesktopUpdates } from './DesktopUpdates';
+import { DesktopUpdates, DesktopVersion } from './DesktopUpdates';
 import { Footer } from './Footer';
 import { PageLoadingIndicator } from './PageData';
 import { BoulderBro } from './BoulderBro';
@@ -114,7 +114,9 @@ function Shell() {
         <ThemeProvider>
             <PageLoadingIndicator />
             <DesktopStatus />
-            <AppHeader compact={state.status !== 'ready'} />
+            <AppHeader compact={state.status !== 'ready'}>
+                <DesktopUpdates />
+            </AppHeader>
             {initial ? (
                 <main>
                     <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading...'}</p>
@@ -184,7 +186,7 @@ function Shell() {
                     </ScreenBoundary>
                 </SessionRuntime>
             )}
-            <Footer><DesktopUpdates /></Footer>
+            <Footer><DesktopVersion /></Footer>
             <div className="team-link">
                 <Link to="/team">Team</Link>
             </div>

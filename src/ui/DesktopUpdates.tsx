@@ -2,6 +2,22 @@ import { useEffect, useRef, useState } from 'react';
 import { useDesktopState } from './useDesktopState';
 import type { DesktopUpdateState } from './desktop-state';
 
+// Keep the action icons small and let the adjacent text name each control.
+function UpdateIcon({ kind }: { kind: 'download' | 'restart' | 'later' }) {
+    const paths = {
+        download: 'M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5',
+        restart: 'M20 7v5h-5M20 12a8 8 0 1 0-2 5',
+        later: 'M12 8v4l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+    };
+
+    return (
+        <svg className="update-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d={paths[kind]} />
+        </svg>
+    );
+}
+
 // A browser dialog traps focus without blocking timers, gameplay or uploads.
 function UpdateDialog({ state, onLater }: { state: DesktopUpdateState; onLater: () => void }) {
     const dialog = useRef<HTMLDialogElement>(null);
@@ -55,18 +71,20 @@ function UpdateDialog({ state, onLater }: { state: DesktopUpdateState; onLater: 
             <p id="update-description">Restart to install the update.</p>
             {message && <p role="status">{message}</p>}
             <div className="update-actions">
-                <button onClick={() => void restart()} disabled={installing}>Restart now</button>
-                <button ref={laterButton} onClick={onLater} disabled={installing}>Restart later</button>
+                <button onClick={() => void restart()} disabled={installing}>
+                    <UpdateIcon kind="restart" />Restart now
+                </button>
+                <button ref={laterButton} onClick={onLater} disabled={installing}>
+                    <UpdateIcon kind="later" />Restart later
+                </button>
             </div>
         </dialog>
     );
 }
 
-// Stay quiet until a download is ready; Later keeps a small way to reopen it.
-export function DesktopUpdates() {
-    const state = useDesktopState(window.api.getUpdateState, window.api.onUpdateState);
+// Keep the installed version in the footer, separate from header update actions.
+export function DesktopVersion() {
     const [version, setVersion] = useState('');
-    const [deferredVersion, setDeferredVersion] = useState(() => sessionStorage.getItem('deferred-update'));
 
     useEffect(() => {
         let mounted = true;
@@ -76,8 +94,20 @@ export function DesktopUpdates() {
         return () => { mounted = false; };
     }, []);
 
+    return version ? <span className="desktop-version">v{version}</span> : null;
+}
+
+// Checks stay quiet; downloads and deferred updates appear inside the header.
+export function DesktopUpdates() {
+    const state = useDesktopState(window.api.getUpdateState, window.api.onUpdateState);
+    const [deferredVersion, setDeferredVersion] = useState(() => sessionStorage.getItem('deferred-update'));
     const ready = state?.status === 'ready';
     const showDialog = state?.status === 'installing' || (ready && state.version !== deferredVersion);
+    const downloading = state?.status === 'downloading';
+    const progress = state?.percent;
+    const percent = typeof progress === 'number' && Number.isFinite(progress)
+        ? Math.min(100, Math.max(0, Math.round(progress)))
+        : null;
 
     function later() {
         if (!state?.version) return;
@@ -91,10 +121,20 @@ export function DesktopUpdates() {
     }
 
     return (
-        <div className="desktop-version">
-            {version && <span>v{version}</span>}
-            {ready && !showDialog && <button className="text-button" onClick={reopen}>Update ready</button>}
+        <>
+            {downloading && (
+                <span className="header-update update-download" role="status">
+                    <UpdateIcon kind="download" />
+                    Downloading{percent !== null ? ` ${percent}%` : '…'}
+                </span>
+            )}
+            {ready && !showDialog && (
+                <button className="header-update update-ready" onClick={reopen}
+                    title={`Rock Buddy ${state.version} is ready to install`} aria-haspopup="dialog">
+                    <UpdateIcon kind="restart" />Update ready
+                </button>
+            )}
             {showDialog && state && <UpdateDialog key={state.version} state={state} onLater={later} />}
-        </div>
+        </>
     );
 }

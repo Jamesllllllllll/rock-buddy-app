@@ -14,7 +14,7 @@ import {
 } from '@testing-library/react';
 import { AppHeader } from '../../src/ui/AppHeader';
 import { DesktopStatus } from '../../src/ui/DesktopStatus';
-import { DesktopUpdates } from '../../src/ui/DesktopUpdates';
+import { DesktopUpdates, DesktopVersion } from '../../src/ui/DesktopUpdates';
 import { SupportPage } from '../../src/support/SupportPage';
 import { Footer } from '../../src/ui/Footer';
 import { useDesktopState } from '../../src/ui/useDesktopState';
@@ -87,7 +87,7 @@ test('ready updates require a choice, Later can reopen, and late snapshots canno
         getConnectionState: connection.get,
         onConnectionState: connection.subscribe,
     });
-    render(<StrictMode><DesktopStatus /><DesktopUpdates /></StrictMode>);
+    render(<StrictMode><DesktopStatus /><DesktopVersion /><DesktopUpdates /></StrictMode>);
     await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta1')));
     assert.equal(screen.queryByRole('button'), null);
 
@@ -119,21 +119,46 @@ test('ready updates require a choice, Later can reopen, and late snapshots canno
     assert.ok(screen.getByRole('alertdialog'));
 });
 
-test('automatic checks, downloads and connection failures leave only the current version visible', async () => {
+test('header shows download progress and deferred updates while automatic checks stay quiet', async () => {
     const updates = stateSource<any>({ status: 'idle', message: 'Up to date.' });
     setApi({
-        getVersion: async () => '1.12.0-beta1',
+        getVersion: async () => '1.12.0-beta2',
+        getBetaNotice: async () => null,
         getUpdateState: updates.get,
         onUpdateState: updates.subscribe,
     });
-    render(<DesktopUpdates />);
-    await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta1')));
-    for (const status of ['checking', 'downloading', 'error', 'idle', 'disabled']) {
-        updates.emit({ status, message: 'Background updater status', percent: 50 });
+    render(
+        <MemoryRouter>
+            <AppHeader><DesktopUpdates /></AppHeader>
+            <Footer><DesktopVersion /></Footer>
+        </MemoryRouter>,
+    );
+    await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta2').closest('footer')));
+
+    for (const status of ['checking', 'error', 'idle', 'disabled']) {
+        updates.emit({ status, message: 'Background updater status' });
         assert.equal(screen.queryByRole('button'), null);
         assert.equal(screen.queryByRole('alertdialog'), null);
         assert.equal(screen.queryByText('Background updater status'), null);
     }
+
+    // Show progress inside navigation without prompting or exposing a manual check.
+    updates.emit({ status: 'downloading', percent: 49.7 });
+    assert.ok(screen.getByRole('status').closest('nav'));
+    assert.equal(screen.getByRole('status').textContent, 'Downloading 50%');
+    assert.equal(screen.queryByRole('button'), null);
+    assert.equal(screen.queryByRole('alertdialog'), null);
+
+    updates.emit({ status: 'downloading' });
+    assert.equal(screen.getByRole('status').textContent, 'Downloading…');
+
+    updates.emit({ status: 'ready', version: '1.12.0-beta3', message: 'Update ready.' });
+    fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
+    const ready = screen.getByRole('button', { name: 'Update ready' });
+    assert.ok(ready.closest('nav'));
+    assert.equal(screen.queryByRole('status'), null);
+    fireEvent.click(ready);
+    assert.ok(screen.getByRole('alertdialog'));
 });
 
 test('header navigates inside React and updates the active link', async () => {

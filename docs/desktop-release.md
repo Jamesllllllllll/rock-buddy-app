@@ -195,13 +195,14 @@ gameplay, upgrade, or PayPal sandbox acceptance below.
 ## Automatic updates
 
 Installed Windows builds check at startup and every four hours. There is no manual
-check button. The current version appears at the bottom left; checks and downloads
-run quietly, and background updater errors are recorded in the local log.
+check button. The current version appears at the bottom left. Checks stay quiet;
+downloads show a compact progress indicator in the header. Background updater
+errors are recorded in the local log.
 
 Once an update is downloaded, a focused in-app dialog offers **Restart now** or
 **Restart later**. Escape and clicking outside do not dismiss it: choose a button.
 The dialog does not pause gameplay tracking, timers or uploads. Restart later
-leaves an **Update ready** control beside the version to reopen the dialog, and
+leaves a purple **Update ready** control in the header to reopen the dialog, and
 suppresses repeated prompts for that version during the current app session.
 Ordinary app exit never installs an update. Restart now remains subject to the
 main process's gameplay/upload checks; a blocked or failed restart leaves the
@@ -229,6 +230,11 @@ The tester previously confirmed beta1 reports up to date. Leave beta1 installed
 on the test PC so its updater, rather than a manual installation of beta2,
 performs the upgrade. This Windows upgrade test is still pending.
 
+The next candidate adds header progress and the styled Update ready control,
+plus restart/later icons in the dialog. It has not been packaged or published as
+beta3 yet. Beta2's installed UI handles the upgrade to beta3; the header changes
+appear after that upgrade. Existing betas keep using the fork's test feed.
+
 Test A → B on Windows before public release: install A manually, retain login and
 settings, publish the chosen higher B to the test feed, check/download B, choose
 Restart later, restart normally without installation, then choose Restart now.
@@ -245,6 +251,12 @@ and publish only after acceptance. Existing 1.11.0 users see their existing down
 notification and must install the first updater-capable version manually. Later
 versions can download/install/restart inside the app. Signing is not configured;
 Windows installer/publisher prompts still need acceptance testing.
+
+The official release comes from `tnt-coders/rock-buddy-app`, not the fork: merge
+PR #89 after acceptance, then run its manual workflow with `installer=production`
+and the selected stable version. Publish the checked artifacts in that repository.
+The production package already points at TNT's GitHub update feed and the live
+backend. Merging runs checks only; it does not build or publish an installer.
 
 ## Acceptance before public release
 
