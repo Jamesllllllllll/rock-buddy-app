@@ -194,12 +194,20 @@ gameplay, upgrade, or PayPal sandbox acceptance below.
 
 ## Automatic updates
 
-Installed Windows builds check at startup and every four hours. There is no manual
-check button. The current version appears at the bottom left. Checks stay quiet;
+Installed Windows builds check at startup and every four hours. A manual
+**Check for updates** button is available inside the changelog only, using the same
+guarded updater. The current version appears at the bottom left. Checks stay quiet;
 downloads show a compact progress indicator in the header. Background updater
 errors are recorded in the local log.
 The shared header stays visible while scrolling, including when its links wrap
 in a narrow window. Each theme has an opaque header background.
+
+Clicking the installed version opens a local changelog with a 24px screen-edge
+gap. Only its notes scroll; the title, close button and update check stay visible,
+and the page behind it is locked until the dialog closes. `src/ui/Changelog.tsx`
+contains the current build's changes and selected official release summaries.
+Update the current notes when preparing a release; archive them under the released
+version when starting the next release. Missing historical notes are omitted.
 
 Once an update is downloaded, a focused in-app dialog offers **Restart now** or
 **Restart later**. Escape and clicking outside do not dismiss it: choose a button.
@@ -232,10 +240,10 @@ The tester previously confirmed beta1 reports up to date. Leave beta1 installed
 on the test PC so its updater, rather than a manual installation of beta2,
 performs the upgrade. This Windows upgrade test is still pending.
 
-The next candidate adds header progress and the styled Update ready control,
-plus restart/later icons in the dialog. It has not been packaged or published as
-beta3 yet. Beta2's installed UI handles the upgrade to beta3; the header changes
-appear after that upgrade. Existing betas keep using the fork's test feed.
+Beta3 adds sticky header progress and the styled Update ready control, restart/later
+icons, the changelog with a manual update check, and a more compact Config layout.
+Beta2's installed UI handles the upgrade to beta3; the new controls appear after
+that upgrade. Existing betas keep using the fork's test feed.
 
 Test A → B on Windows before public release: install A manually, retain login and
 settings, publish the chosen higher B to the test feed, check/download B, choose
@@ -243,7 +251,8 @@ Restart later, restart normally without installation, then choose Restart now.
 Beta1 still uses its older Check for updates / Install and restart / Later controls.
 Beta2 introduces the dialog; proving that new dialog completes a real upgrade
 requires a higher test version afterward, selected deliberately rather than built
-on every push. To check immediately without a manual button, relaunch the app.
+on every push. Relaunch beta2 to check immediately; beta3 also offers a manual
+check inside the changelog.
 Verify B, retained configuration, and a new score upload. Also test interrupted
 download/retry, no newer version, no downgrade, and clicking install during a song.
 

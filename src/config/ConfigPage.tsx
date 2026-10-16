@@ -113,10 +113,12 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
 
     function address(kind: 'addons' | 'rocksniffer') {
         return (
-            <div className="config-row">
+            <div className="config-row config-address">
                 <label>
                     Host:{' '}
                     <input
+                        type="text"
+                        className="config-host"
                         defaultValue={settings[`${kind}_host`]}
                         onBlur={(event) => {
                             if (event.target.value !== settings[`${kind}_host`])
@@ -128,6 +130,7 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                     Port:{' '}
                     <input
                         type="number"
+                        className="config-port"
                         min={1}
                         max={65535}
                         defaultValue={settings[`${kind}_port`]}
@@ -180,8 +183,10 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
             <fieldset disabled={action.pending}>
                 <div className="config-row">
                     <strong>Steam User Data Path:</strong>
-                    <span>{settings.steam_user_data_path || '[none selected]'}</span>
-                    <button className="btn-primary" onClick={() => browse('steam_user_data_path')}>
+                    <span className="config-path" title={settings.steam_user_data_path}>
+                        {settings.steam_user_data_path || '[none selected]'}
+                    </span>
+                    <button className="btn-primary config-action" onClick={() => browse('steam_user_data_path')}>
                         Browse
                     </button>
                 </div>
@@ -214,17 +219,18 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                     </select>
                 </label>
                 <hr />
-                <div className="config-row">
+                <div className="config-row config-section-heading">
                     <h2>Sniffer</h2>
                     {checkbox('always_sniff', 'Always Sniff')}
                     {checkbox('lurk_mode', 'Lurk Mode', settings.use_external_rocksniffer)}
-                    <button className="btn-primary" onClick={() => setPopup('reader')}>
+                    <button className="btn-primary config-action" onClick={() => setPopup('reader')}>
                         RockSniffer Config
                     </button>
                 </div>
                 <label className="config-row">
                     <strong>Preferred Path:</strong>
                     <select
+                        className="config-choice"
                         value={settings.preferred_path}
                         onChange={(event) => change('preferred_path', event.target.value)}
                     >
@@ -235,62 +241,61 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                         ))}
                     </select>
                 </label>
-                <label className="config-row">
-                    <strong>Miss SFX:</strong>
-                    <select
-                        value={settings.miss_sfx}
-                        onChange={(event) => change('miss_sfx', event.target.value)}
-                    >
-                        {Object.entries({
-                            none: 'None',
-                            guitar_hero: 'Guitar Hero',
-                            doh: 'D’oh!',
-                            oof: 'Oof',
-                            oof2: 'Oof 2',
-                            custom: 'Custom',
-                            custom_multi: 'Custom (multi)',
-                        }).map(([key, name]) => (
-                            <option key={key} value={key}>
-                                {name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                {settings.miss_sfx.startsWith('custom') && (
-                    <div className="config-row">
-                        <span>
-                            {settings[
-                                settings.miss_sfx === 'custom'
-                                    ? 'custom_miss_sfx_path'
-                                    : 'custom_miss_sfx_multi_path'
-                            ] || '[none selected]'}
-                        </span>
-                        <button
-                            onClick={() =>
-                                browse(
+                <div className="config-row config-sound">
+                    <label className="config-sound-choice">
+                        <strong>Miss SFX:</strong>
+                        <select
+                            className="config-choice"
+                            value={settings.miss_sfx}
+                            onChange={(event) => change('miss_sfx', event.target.value)}
+                        >
+                            {Object.entries({
+                                none: 'None',
+                                guitar_hero: 'Guitar Hero',
+                                doh: 'D’oh!',
+                                oof: 'Oof',
+                                oof2: 'Oof 2',
+                                custom: 'Custom',
+                                custom_multi: 'Custom (multi)',
+                            }).map(([key, name]) => (
+                                <option key={key} value={key}>{name}</option>
+                            ))}
+                        </select>
+                    </label>
+                    {settings.miss_sfx.startsWith('custom') && (
+                        <div className="config-custom-sound">
+                            <span className="config-path">
+                                {settings[
+                                    settings.miss_sfx === 'custom'
+                                        ? 'custom_miss_sfx_path'
+                                        : 'custom_miss_sfx_multi_path'
+                                ] || '[none selected]'}
+                            </span>
+                            <button className="btn-primary config-action"
+                                onClick={() => browse(
                                     settings.miss_sfx === 'custom'
                                         ? 'custom_miss_sfx_path'
                                         : 'custom_miss_sfx_multi_path',
-                                )
-                            }
-                        >
-                            Browse
-                        </button>
-                    </div>
-                )}
+                                )}
+                            >
+                                Browse
+                            </button>
+                        </div>
+                    )}
+                </div>
                 <hr />
-                <div className="config-row">
+                <div className="config-row config-section-heading">
                     <h2>Addons</h2>
-                    <button className="btn-primary" onClick={() => window.api.openAddonsFolder()}>
+                    <button className="btn-primary config-action" onClick={() => window.api.openAddonsFolder()}>
                         Open Addons Folder
                     </button>
                 </div>
                 {checkbox('addons_enabled', 'Enabled (starts a local web server)')}
                 {address('addons')}
                 <hr />
-                <div className="config-row">
+                <div className="config-row config-section-heading">
                     <h2>Other</h2>
-                    <button className="btn-primary" onClick={() => setPopup('advanced')}>
+                    <button className="btn-primary config-action" onClick={() => setPopup('advanced')}>
                         Advanced Config
                     </button>
                 </div>
@@ -329,7 +334,7 @@ export function ConfigPage() {
     // Profile discovery and editable local settings must be reread on each visit.
     const config = useResource(`config:${auth.user_id}`, () => readConfig(auth.user_id), { cache: false });
     return (
-        <main>
+        <main className="config-page">
             <div className="page-heading">
                 <h1>Config</h1>
                 <ThemeControls />

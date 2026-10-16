@@ -12,6 +12,7 @@ function subscribe<State>(channel: string, callback: (state: State) => void) {
 export const API = {
     getBetaNotice: (): Promise<string | null> => ipcRenderer.invoke('get-beta-notice'),
     getUpdateState: (): Promise<DesktopUpdateState> => ipcRenderer.invoke('get-update-state'),
+    checkDesktopUpdate: (): Promise<DesktopUpdateState> => ipcRenderer.invoke('check-desktop-update'),
     onUpdateState: (callback: (state: DesktopUpdateState) => void) => subscribe('update-state', callback),
     installDesktopUpdate: (): Promise<DesktopUpdateState | undefined> => ipcRenderer.invoke('install-desktop-update'),
     getConnectionState: (): Promise<ConnectionState> => ipcRenderer.invoke('get-connection-state'),

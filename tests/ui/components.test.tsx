@@ -11,6 +11,7 @@ import {
     renderHook,
     screen,
     waitFor,
+    within,
 } from '@testing-library/react';
 import { AppHeader } from '../../src/ui/AppHeader';
 import { DesktopStatus } from '../../src/ui/DesktopStatus';
@@ -89,7 +90,7 @@ test('ready updates require a choice, Later can reopen, and late snapshots canno
     });
     render(<StrictMode><DesktopStatus /><DesktopVersion /><DesktopUpdates /></StrictMode>);
     await waitFor(() => assert.ok(screen.getByText('v1.12.0-beta1')));
-    assert.equal(screen.queryByRole('button'), null);
+    assert.equal(screen.queryByRole('button', { name: 'Check for updates' }), null);
 
     connection.emit({ connected: false, message: 'Connection lost' });
     assert.ok(screen.getByRole('button', { name: 'Reload page' }));
@@ -137,7 +138,7 @@ test('header shows download progress and deferred updates while automatic checks
 
     for (const status of ['checking', 'error', 'idle', 'disabled']) {
         updates.emit({ status, message: 'Background updater status' });
-        assert.equal(screen.queryByRole('button'), null);
+        assert.equal(within(screen.getByRole('navigation')).queryByRole('button'), null);
         assert.equal(screen.queryByRole('alertdialog'), null);
         assert.equal(screen.queryByText('Background updater status'), null);
     }
@@ -146,7 +147,7 @@ test('header shows download progress and deferred updates while automatic checks
     updates.emit({ status: 'downloading', percent: 49.7 });
     assert.ok(screen.getByRole('status').closest('nav'));
     assert.equal(screen.getByRole('status').textContent, 'Downloading 50%');
-    assert.equal(screen.queryByRole('button'), null);
+    assert.equal(within(screen.getByRole('navigation')).queryByRole('button'), null);
     assert.equal(screen.queryByRole('alertdialog'), null);
 
     updates.emit({ status: 'downloading' });
@@ -327,4 +328,66 @@ test('restart stays guarded while pending and can recover from blocked or failed
     assert.ok(screen.getByRole('alertdialog'));
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
     assert.equal(screen.queryByRole('alertdialog'), null);
+});
+
+
+test('the version opens bundled current and historical release notes without network access', async () => {
+    setApi({
+        getVersion: async () => '1.12.0-beta3',
+        getUpdateState: async () => ({ status: 'disabled', message: 'Updates are available in installed Windows builds.' }),
+        onUpdateState: () => () => {},
+    });
+    render(<Footer><DesktopVersion /></Footer>);
+    const version = await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta3' });
+    assert.equal(screen.queryByRole('dialog'), null);
+
+    fireEvent.click(version);
+    const dialog = screen.getByRole('dialog', { name: 'Changelog' });
+    assert.equal((dialog as HTMLDialogElement).open, true);
+    assert.equal(document.documentElement.style.overflow, 'hidden');
+    assert.ok(within(dialog).getByRole('heading', { name: 'v1.12.0-beta3' }));
+    assert.ok(within(dialog).getByRole('heading', { name: 'v1.11.0' }));
+    assert.ok(within(dialog).getByText('Added Rocksmith Learn & Play Edition compatibility.'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    assert.equal(screen.queryByRole('dialog'), null);
+    assert.equal(document.documentElement.style.overflow, '');
+
+    fireEvent.click(version);
+    fireEvent(screen.getByRole('dialog'), new window.Event('cancel', { cancelable: true }));
+    assert.equal(screen.queryByRole('dialog'), null);
+});
+
+
+test('changelog checks report results and failures without duplicate requests or downloads', async () => {
+    const updates = stateSource<any>({ status: 'idle', message: '' });
+    const response = deferred<any>();
+    let checks = 0;
+    setApi({
+        getVersion: async () => '1.12.0-beta3',
+        getUpdateState: updates.get,
+        onUpdateState: updates.subscribe,
+        checkDesktopUpdate: async () => { checks++; return response.promise; },
+    });
+    render(<DesktopVersion />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta3' }));
+    const check = await screen.findByRole('button', { name: 'Check for updates' }) as HTMLButtonElement;
+    await waitFor(() => assert.equal(check.disabled, false));
+
+    act(() => { fireEvent.click(check); fireEvent.click(check); });
+    assert.equal(checks, 1);
+    assert.equal(check.disabled, true);
+    updates.emit({ status: 'idle', message: 'Rock Buddy is up to date.' });
+    await act(async () => response.resolve({}));
+    assert.match(screen.getByRole('status').textContent || '', /up to date/);
+    assert.equal(check.disabled, false);
+
+    window.api.checkDesktopUpdate = async () => { throw new Error('IPC failed'); };
+    fireEvent.click(check);
+    await waitFor(() => assert.match(screen.getByRole('status').textContent || '', /Could not check/));
+    assert.equal(check.disabled, false);
+
+    for (const status of ['checking', 'downloading', 'ready', 'installing', 'disabled']) {
+        updates.emit({ status, message: 'Updater status' });
+        assert.equal(check.disabled, true, status);
+    }
 });

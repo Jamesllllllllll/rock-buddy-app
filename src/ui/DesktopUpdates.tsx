@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDesktopState } from './useDesktopState';
 import type { DesktopUpdateState } from './desktop-state';
+import { Changelog } from './Changelog';
 
 // Keep the action icons small and let the adjacent text name each control.
 function UpdateIcon({ kind }: { kind: 'download' | 'restart' | 'later' }) {
@@ -85,6 +86,7 @@ function UpdateDialog({ state, onLater }: { state: DesktopUpdateState; onLater: 
 // Keep the installed version in the footer, separate from header update actions.
 export function DesktopVersion() {
     const [version, setVersion] = useState('');
+    const [showChangelog, setShowChangelog] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -94,7 +96,17 @@ export function DesktopVersion() {
         return () => { mounted = false; };
     }, []);
 
-    return version ? <span className="desktop-version">v{version}</span> : null;
+    if (!version) return null;
+
+    return (
+        <>
+            <button className="desktop-version text-button" onClick={() => setShowChangelog(true)}
+                aria-label={`Changelog for Rock Buddy ${version}`} aria-haspopup="dialog" title="Changelog">
+                v{version}
+            </button>
+            {showChangelog && <Changelog version={version} onClose={() => setShowChangelog(false)} />}
+        </>
+    );
 }
 
 // Checks stay quiet; downloads and deferred updates appear inside the header.
