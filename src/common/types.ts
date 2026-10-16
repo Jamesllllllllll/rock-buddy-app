@@ -7,8 +7,8 @@ export interface AuthData {
 export interface Score {
     user_id: number;
     username: string;
-    king: boolean;
-    verified?: boolean;
+    king: boolean | 0 | 1;
+    verified?: boolean | 0 | 1;
     last_played: string | null;
     play_count: number | null;
     streak: number;

@@ -5,7 +5,7 @@ import { useAuth } from '../ui/Session';
 import { errorMessage } from '../ui/api';
 import { useQueryClient } from '@tanstack/react-query';
 
-type Runtime = { engine: Sniffer | null; error?: string; retry: () => void };
+type Runtime = { engine: Sniffer | null; error?: string; paused: boolean; retry: () => void };
 const GameplayContext = createContext<Runtime | null>(null);
 
 // The account owns one engine; switching UI screens does not create another poller.
@@ -64,7 +64,7 @@ export function GameplayProvider({ children }: { children: ReactNode }) {
     }, [client, engine]);
 
     return (
-        <GameplayContext value={{ engine, error, retry: () => setRevision((value) => value + 1) }}>
+        <GameplayContext value={{ engine, error, paused: configuring, retry: () => setRevision((value) => value + 1) }}>
             {children}
         </GameplayContext>
     );

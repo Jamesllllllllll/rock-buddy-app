@@ -18,6 +18,7 @@ export enum VerificationState {
 }
 
 export interface SnifferState {
+    activity: 'waiting' | 'sniffing' | 'paused' | 'error';
     status: string;
     error: string | null;
     song: SongInfo | null;
@@ -34,6 +35,9 @@ export interface SnifferState {
     scoreRevision: number;
     leaderboard: { message: string; scores: Score[] | null; mode: string };
 }
+
+// Startup and song selection are normal waiting states, not reader failures.
+class SnifferWaiting extends Error {}
 
 export class Sniffer {
     // Refresh rate in milliseconds
@@ -101,6 +105,7 @@ export class Sniffer {
     private listeners = new Set<() => void>();
     private leaderboardRequest = 0;
     private state: SnifferState = {
+        activity: 'waiting',
         status: 'Waiting...',
         error: null,
         song: null,
@@ -147,7 +152,7 @@ export class Sniffer {
 
     private showError(error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        this.publish({ error: message, status: 'Waiting...' });
+        this.publish({ error: message, status: 'Waiting...', activity: error instanceof SnifferWaiting ? 'waiting' : 'error' });
     }
 
     public static async create(auth: AuthData, signal?: AbortSignal): Promise<Sniffer> {
@@ -230,17 +235,17 @@ export class Sniffer {
     private async sniff(): Promise<any> {
         const rocksnifferData = await this._rocksniffer.sniff();
         if (rocksnifferData === null) {
-            throw new Error('RockSniffer is starting...');
+            throw new SnifferWaiting('RockSniffer is starting...');
         } else if (!rocksnifferData['RocksmithFound']) {
-            throw new Error('Waiting for Rocksmith...');
+            throw new SnifferWaiting('Waiting for Rocksmith...');
         } else if (rocksnifferData['psarcProcessingCount'] > 0) {
-            throw new Error(
+            throw new SnifferWaiting(
                 'RockSniffer is enumerating DLC... ' +
                     rocksnifferData['psarcProcessingCount'] +
                     ' files remaining.',
             );
         } else if (!rocksnifferData['success']) {
-            throw new Error('Navigate to a song in Rocksmith to begin sniffing.');
+            throw new SnifferWaiting('Navigate to a song in Rocksmith to begin sniffing.');
         }
 
         return rocksnifferData;
@@ -367,7 +372,11 @@ export class Sniffer {
             return;
         }
 
-        this.publish({ status: 'Sniffing...', error: null });
+        this.publish({
+            status: 'Sniffing...',
+            error: null,
+            activity: this._isPaused ? 'paused' : this.state.live?.active ? 'sniffing' : 'waiting',
+        });
 
         // Reset the timout counter
         this._rocksnifferTimeoutCounter = 0;

@@ -192,19 +192,21 @@ A local Electron smoke run covers Search dialogs, Rank, Profile, Config, Support
 and cooldown using synthetic bridge responses. This does not replace real Windows
 gameplay, upgrade, or PayPal sandbox acceptance below.
 
-## Beta4 candidate
+## Beta5 candidate
 
-The published test build is `1.12.0-beta4`. It includes the refreshed theme styles,
-a Custom theme dialog that stays readable regardless of selected colors, header
-sign-in/sign-out controls, and fixed header/footer placement around the scrolling
-page content. Config saves keep unrelated controls enabled. The header Beta badge
-is removed; the installation, rehearsal backend and update feed remain separate.
+The next test build is `1.12.0-beta5`. It restores exact Width/Height controls in
+Config, sets a 640 × 480 minimum window, and makes ranking cards adapt to two
+columns in smaller windows. It fixes stray zeroes beside uncrowned/unverified
+players and adds a Sniffer header indicator: green for tracking, orange for
+waiting/paused/Lurk mode, and red for reader/setup errors. Hover or keyboard-focus
+Sniffer for the explanation. Green does not confirm verification or upload success.
 
-Keep beta3 installed to test the automatic upgrade to beta4. Confirm Restart later,
+Keep an older Beta installed to test the automatic upgrade. Confirm Restart later,
 Restart now, retained login/settings/theme, and a verified score after upgrading.
-Also test quick Config edits and restart persistence, narrow windows/dialogs,
-background gameplay across tabs, account/profile switching, and connection recovery.
-This candidate is not approval to merge or publish the production release.
+Test exact sizing and restart persistence on Windows, rankings at narrow widths,
+and Sniffer status while playing, waiting, changing tabs and opening Config.
+The rehearsal backend and sandbox PayPal are unchanged. This candidate is not
+approval to merge or publish the production release.
 
 ## Automatic updates
 
@@ -302,8 +304,13 @@ backend. Merging runs checks only; it does not build or publish an installer.
   size and position, including monitors left of or above the primary display.
   Repeat after logout, with maximized/minimized windows, different Windows display
   scaling, and after disconnecting a monitor. The main process saves normal bounds
-  and maximized state per installation/backend; resize the window directly instead
-  of entering dimensions in Config.
+  and maximized state per installation/backend; resize the window directly or enter exact Width/Height in Config and click
+  Apply size. The minimum is 640 × 480. Rankings use four columns on wide windows
+  and two below 960px. Card text and spacing follow the column's width, so wider
+  two-column cards regain larger text. Check all themes
+  at the minimum size. These are outer dimensions in display-scaled pixels; applying them
+  restores a maximized window and keeps its position. Test persistence after an
+  immediate close and reopen.
   Existing account dimensions are used as a fallback on the first launch. Native
   Wayland positioning is controlled by the compositor and is not a Windows test.
 - Upgrade existing regular 1.11.0 to the production candidate on Windows, preserving

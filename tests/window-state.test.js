@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
-const { restoreWindowState, trackWindowState, validWindowSize } = require('../src/window-state');
+const { restoreWindowState, trackWindowState, validWindowSize, applyWindowSize } = require('../src/window-state');
 
 // Model Electron's display coordinates in device-independent pixels, including a left monitor.
 function displays() {
@@ -19,6 +19,15 @@ function displays() {
 test('restores exact negative coordinates and custom dimensions on a connected monitor', () => {
     const saved = { x: -1650, y: -150, width: 850, height: 600, maximized: false };
     assert.deepEqual(restoreWindowState(saved, displays()), saved);
+});
+
+test('grows old small windows to the minimum without losing their monitor position', () => {
+    assert.deepEqual(restoreWindowState({ x: -1600, y: -100, width: 420, height: 350 }, displays()), {
+        x: -1600, y: -100, width: 640, height: 480, maximized: false,
+    });
+    assert.equal(validWindowSize(640, 480), true);
+    assert.equal(validWindowSize(639, 480), false);
+    assert.equal(validWindowSize(640, 479), false);
 });
 
 test('recovers a disconnected monitor and clamps oversized windows to the available work area', () => {
@@ -76,6 +85,27 @@ function trackedWindow() {
     }, screen, { ...win.bounds, maximized: false }, timers);
     return { win, screen, writes, pending };
 }
+
+test('precise sizing restores a maximized window, keeps its position and persists on close', () => {
+    const { win, writes } = trackedWindow();
+    win.maximized = true;
+    assert.deepEqual(applyWindowSize(win, 960, 540), { width: 960, height: 540 });
+    assert.equal(win.maximized, false);
+    assert.deepEqual(win.bounds, { x: -1600, y: -100, width: 960, height: 540 });
+    win.emit('close');
+    assert.deepEqual(writes.at(-1), { ...win.bounds, maximized: false });
+});
+
+test('invalid dimensions and fullscreen sizing fail without changing window state', () => {
+    const { win } = trackedWindow();
+    const before = { ...win.bounds };
+    for (const [width, height] of [[0, 600], [800, 0], [800.5, 600], ['800', 600], [20000, 600], [NaN, 600]]) {
+        assert.throws(() => applyWindowSize(win, width, height), /whole numbers/);
+    }
+    win.isFullScreen = () => true;
+    assert.throws(() => applyWindowSize(win, 800, 600), /Exit full screen/);
+    assert.deepEqual(win.bounds, before);
+});
 
 test('coalesces changes and saves the most recent bounds without any Config page', () => {
     const { win, writes, pending } = trackedWindow();

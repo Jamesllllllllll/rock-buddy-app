@@ -15,7 +15,8 @@ const profileImportDecisions = new Map();
 const { createBackendClient, CONNECTION_MESSAGE } = require('./backend-client');
 const { createDesktopUpdates, updatesEnabled } = require('./desktop-updates');
 const { createSupportCheckout } = require('./support-checkout');
-const { restoreWindowState, trackWindowState } = require('./window-state');
+const { restoreWindowState, trackWindowState, applyWindowSize } = require('./window-state');
+const { MINIMUM_SIZE } = require('./window-size');
 const { pathToFileURL } = require('node:url');
 let supportCheckout = null;
 let desktopUpdates = null;
@@ -299,6 +300,8 @@ function createWindow() {
     const { x, y, width, height } = windowState;
     const win = new BrowserWindow({
         x, y, width, height,
+        minWidth: MINIMUM_SIZE.width,
+        minHeight: MINIMUM_SIZE.height,
         show: false,
         webPreferences: {
             preload: path.join(__dirname, '..', 'dist', 'preload.js'),
@@ -802,6 +805,16 @@ function createWindow() {
 
 ipcMain.handle('backend-post', (_event, url, data) => backendClient.post(url, data));
 ipcMain.handle('get-connection-state', () => backendClient.getState());
+
+// Window controls operate on the requesting window, not account-specific settings.
+ipcMain.handle('get-window-size', event => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) throw new Error('The window is no longer available.');
+    const { width, height } = win.getNormalBounds();
+    return { width, height };
+});
+ipcMain.handle('set-window-size', (event, size) =>
+    applyWindowSize(BrowserWindow.fromWebContents(event.sender), size?.width, size?.height));
 ipcMain.handle('get-update-state', () => desktopUpdates?.getState() || { status: 'disabled', message: 'Updates are available in installed Windows builds.' });
 // The changelog uses the same guarded check as the automatic schedule.
 ipcMain.handle('check-desktop-update', () => desktopUpdates?.check() || { status: 'disabled', message: 'Updates are available in installed Windows builds.' });

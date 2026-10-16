@@ -10,6 +10,8 @@ function subscribe<State>(channel: string, callback: (state: State) => void) {
 }
 
 export const API = {
+    getWindowSize: (): Promise<{ width: number; height: number }> => ipcRenderer.invoke('get-window-size'),
+    setWindowSize: (size: { width: number; height: number }): Promise<{ width: number; height: number }> => ipcRenderer.invoke('set-window-size', size),
     getBetaNotice: (): Promise<string | null> => ipcRenderer.invoke('get-beta-notice'),
     getUpdateState: (): Promise<DesktopUpdateState> => ipcRenderer.invoke('get-update-state'),
     checkDesktopUpdate: (): Promise<DesktopUpdateState> => ipcRenderer.invoke('check-desktop-update'),

@@ -116,7 +116,7 @@ test('ready updates require a choice, Later can reopen, and late snapshots canno
     // The same ready event stays dismissed; a different version asks again.
     updates.emit({ status: 'ready', version: '1.12.0-beta2', message: 'Update ready.' });
     assert.equal(screen.queryByRole('alertdialog'), null);
-    updates.emit({ status: 'ready', version: '1.12.0-beta4', message: 'Update ready.' });
+    updates.emit({ status: 'ready', version: '1.12.0-beta5', message: 'Update ready.' });
     assert.ok(screen.getByRole('alertdialog'));
 });
 
@@ -153,7 +153,7 @@ test('header shows download progress and deferred updates while automatic checks
     updates.emit({ status: 'downloading' });
     assert.equal(screen.getByRole('status').textContent, 'Downloading…');
 
-    updates.emit({ status: 'ready', version: '1.12.0-beta4', message: 'Update ready.' });
+    updates.emit({ status: 'ready', version: '1.12.0-beta5', message: 'Update ready.' });
     fireEvent.click(screen.getByRole('button', { name: 'Restart later' }));
     const ready = screen.getByRole('button', { name: 'Update ready' });
     assert.ok(ready.closest('nav'));
@@ -331,19 +331,19 @@ test('restart stays guarded while pending and can recover from blocked or failed
 
 test('the version opens bundled current and historical release notes without network access', async () => {
     setApi({
-        getVersion: async () => '1.12.0-beta4',
+        getVersion: async () => '1.12.0-beta5',
         getUpdateState: async () => ({ status: 'disabled', message: 'Updates are available in installed Windows builds.' }),
         onUpdateState: () => () => {},
     });
     render(<Footer><DesktopVersion /></Footer>);
-    const version = await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta4' });
+    const version = await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta5' });
     assert.equal(screen.queryByRole('dialog'), null);
 
     fireEvent.click(version);
     const dialog = screen.getByRole('dialog', { name: 'Changelog' });
     assert.equal((dialog as HTMLDialogElement).open, true);
     assert.equal(document.documentElement.style.overflow, 'hidden');
-    assert.ok(within(dialog).getByRole('heading', { name: 'v1.12.0-beta4' }));
+    assert.ok(within(dialog).getByRole('heading', { name: 'v1.12.0-beta5' }));
     assert.ok(within(dialog).getByRole('heading', { name: 'v1.11.0' }));
     assert.ok(within(dialog).getByText('Added Rocksmith Learn & Play Edition compatibility.'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
@@ -361,13 +361,13 @@ test('changelog checks report results and failures without duplicate requests or
     const response = deferred<any>();
     let checks = 0;
     setApi({
-        getVersion: async () => '1.12.0-beta4',
+        getVersion: async () => '1.12.0-beta5',
         getUpdateState: updates.get,
         onUpdateState: updates.subscribe,
         checkDesktopUpdate: async () => { checks++; return response.promise; },
     });
     render(<DesktopVersion />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta4' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Changelog for Rock Buddy 1.12.0-beta5' }));
     const check = await screen.findByRole('button', { name: 'Check for updates' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(check.disabled, false));
 

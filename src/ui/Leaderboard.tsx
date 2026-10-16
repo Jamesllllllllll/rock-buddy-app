@@ -60,7 +60,7 @@ export function ScoresTable({ scores, mode, hiddenColumns = [] }: {
                         >
                             {!hiddenColumns.includes('rank') && <td>{score.rank}</td>}
                             <td>
-                                {score.king && (
+                                {Boolean(score.king) && (
                                     <img
                                         className="score-badge"
                                         src="../images/crown.png"
@@ -85,7 +85,7 @@ export function ScoresTable({ scores, mode, hiddenColumns = [] }: {
                                     {!hiddenColumns.includes('streak') && <td>{score.streak}</td>}
                                     {!hiddenColumns.includes('mastery') && (
                                         <td>
-                                            {score.verified && (
+                                            {Boolean(score.verified) && (
                                                 <img
                                                     className="score-badge"
                                                     src="../images/verification-icons/verified-badge.png"

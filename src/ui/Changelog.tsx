@@ -4,6 +4,10 @@ import { useDesktopState } from './useDesktopState';
 
 // These notes describe the code bundled with this installer, including beta builds.
 const currentChanges = [
+    'A Sniffer status light in the header shows tracking, waiting, paused and error states.',
+    'Set precise window width and height in Config; the minimum window size is 640 × 480.',
+    'Rankings adapt to two columns in smaller windows, with text sized to each card.',
+    'Fixed stray zeroes beside players without a crown or verified score.',
     'Automatic update downloads with a choice to restart now or later, plus a manual check in the changelog.',
     'A shared header and footer that stay visible while only the page content scrolls.',
     'Refreshed buttons, inputs and spacing across Dark, Light and Retro themes.',
@@ -21,6 +25,14 @@ const currentChanges = [
 // Summaries from the official GitHub release notes; missing versions are omitted.
 // https://github.com/tnt-coders/rock-buddy-app/releases
 const previousReleases = [
+    {
+        version: '1.12.0-beta4',
+        changes: [
+            'Refreshed themes and controls, with a readable Custom theme dialog.',
+            'Kept the header and footer visible and removed the Beta badge.',
+            'Stopped unrelated Config controls from flashing during saves.',
+        ],
+    },
     {
         version: '1.12.0-beta3',
         changes: [

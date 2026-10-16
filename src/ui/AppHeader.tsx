@@ -40,7 +40,7 @@ export function HeaderAccount() {
     );
 }
 
-export function AppHeader({ compact = false, children }: { compact?: boolean; children?: ReactNode }) {
+export function AppHeader({ compact = false, children, snifferStatus }: { compact?: boolean; children?: ReactNode; snifferStatus?: ReactNode }) {
     const links = compact ? ['Support'] : pages;
     return (
         <nav className="navtop" aria-label="Main navigation">
@@ -53,9 +53,12 @@ export function AppHeader({ compact = false, children }: { compact?: boolean; ch
                     key={name}
                     className="header-tab"
                     to={`/${name.toLowerCase()}`}
+                    aria-label={name}
+                    aria-describedby={name === 'Sniffer' && snifferStatus ? 'sniffer-status-tooltip' : undefined}
                     style={name === 'Config' || compact ? { marginLeft: 'auto' } : undefined}
                 >
                     {name}
+                    {name === 'Sniffer' && snifferStatus}
                 </NavLink>
             ))}
             {children}

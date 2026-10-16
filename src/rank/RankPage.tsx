@@ -11,7 +11,7 @@ interface Rank {
     user_id: number;
     username: string;
     points: number;
-    king?: boolean;
+    king?: boolean | 0 | 1;
 }
 const paths = ['overall', 'lead', 'rhythm', 'bass'] as const;
 
@@ -72,7 +72,7 @@ function RankDialog({ path, onClose }: { path: string; onClose: () => void }) {
                             >
                                 <td>{index + 1}</td>
                                 <td>
-                                    {row.king && (
+                                    {Boolean(row.king) && (
                                         <img
                                             className="score-badge"
                                             src="../images/crown.png"

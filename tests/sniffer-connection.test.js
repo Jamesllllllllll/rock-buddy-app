@@ -77,3 +77,37 @@ test('an ended session cannot submit another score', async () => {
     sniffer.stop();
     await assert.rejects(sniffer.send('https://example.invalid/api/data/sniffer_sync.php', {}), /session has ended/);
 });
+
+test('normal reader waiting states remain distinct from failures', async () => {
+    const Sniffer = loadSniffer();
+    let data = null;
+    const reader = { sniff: async () => data };
+    const sniffer = new Sniffer({}, reader, { enabled: () => false }, { user_id: 1 });
+    for (const snapshot of [null, { RocksmithFound: false }, { RocksmithFound: true, psarcProcessingCount: 2 }, { RocksmithFound: true, success: false }]) {
+        data = snapshot;
+        await sniffer.refresh();
+        assert.equal(sniffer.getSnapshot().activity, 'waiting');
+    }
+    reader.sniff = async () => { throw new Error('Reader disconnected'); };
+    await sniffer.refresh();
+    assert.equal(sniffer.getSnapshot().activity, 'error');
+});
+
+test('reader activity follows gameplay pauses and recovers after an error', async () => {
+    const Sniffer = loadSniffer();
+    const sniffer = new Sniffer({}, {}, { enabled: () => false }, { user_id: 1 });
+    sniffer.sniff = async () => ({ memoryReadout: { songTimer: 30 } });
+    sniffer.updatePath = sniffer.updateSongInfo = sniffer.updateLiveFeed = () => {};
+    sniffer.monitorProgress = sniffer.checkSnort = async () => {};
+    sniffer.publish({ error: 'Previous error', activity: 'error', live: { active: true } });
+    await sniffer.refresh();
+    assert.equal(sniffer.getSnapshot().activity, 'sniffing');
+    assert.equal(sniffer.getSnapshot().error, null);
+    sniffer._isPaused = true;
+    await sniffer.refresh();
+    assert.equal(sniffer.getSnapshot().activity, 'paused');
+    sniffer._isPaused = false;
+    sniffer.publish({ live: { active: false } });
+    await sniffer.refresh();
+    assert.equal(sniffer.getSnapshot().activity, 'waiting');
+});

@@ -7,6 +7,7 @@ import { Modal } from '../ui/Modal';
 import { ThemeControls } from '../ui/Theme';
 import { useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../ui/api';
+import { WindowSizeControls } from './WindowSizeControls';
 
 const defaults = {
     always_sniff: false,
@@ -344,6 +345,7 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                     </button>
                 </div>
                 {checkbox('extra_logging', 'Extra Logging')}
+                <WindowSizeControls />
             </fieldset>
             {popup && (
                 <Modal

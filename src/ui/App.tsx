@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 
 import { SessionProvider, useSession, useAuth } from './Session';
 import { ThemeProvider } from './Theme';
 import { AppHeader, HeaderAccount } from './AppHeader';
+import { SnifferStatus } from '../sniffer/SnifferStatus';
 import { DesktopStatus } from './DesktopStatus';
 import { DesktopUpdates, DesktopVersion } from './DesktopUpdates';
 import { Footer } from './Footer';
@@ -118,23 +119,23 @@ function Shell() {
         <ThemeProvider>
             <PageLoadingIndicator />
             <DesktopStatus />
-            <AppHeader compact={state.status !== 'ready'}>
-                <DesktopUpdates />
-                <HeaderAccount />
-            </AppHeader>
-            <div className="app-content" ref={content}>
-                {initial ? (
-                    <main>
-                        <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading...'}</p>
-                        {state.error && (
-                            <>
-                                <button onClick={() => void refresh()}>Retry</button>
-                                <button onClick={() => void logout()}>Log in again</button>
-                            </>
-                        )}
-                    </main>
-                ) : (
-                    <SessionRuntime>
+            <SessionRuntime>
+                <AppHeader compact={state.status !== 'ready'} snifferStatus={state.status === 'ready' ? <SnifferStatus /> : undefined}>
+                    <DesktopUpdates />
+                    <HeaderAccount />
+                </AppHeader>
+                <div className="app-content" ref={content}>
+                    {initial ? (
+                        <main>
+                            <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading...'}</p>
+                            {state.error && (
+                                <>
+                                    <button onClick={() => void refresh()}>Retry</button>
+                                    <button onClick={() => void logout()}>Log in again</button>
+                                </>
+                            )}
+                        </main>
+                    ) : (
                         <ScreenBoundary route={location.pathname}>
                             <Routes>
                                 <Route path="/login" element={<AuthPage key="login" />} />
@@ -190,9 +191,9 @@ function Shell() {
                                 />
                             </Routes>
                         </ScreenBoundary>
-                    </SessionRuntime>
-                )}
-            </div>
+                    )}
+                </div>
+            </SessionRuntime>
             <Footer links={<Link className="team-link" to="/team">Team</Link>}>
                 <DesktopVersion />
             </Footer>

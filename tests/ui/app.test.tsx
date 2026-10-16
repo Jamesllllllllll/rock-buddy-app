@@ -17,6 +17,8 @@ import { useResource } from '../../src/ui/useResource';
 import { PageDataProvider } from '../../src/ui/PageData';
 import { usernameWaitMessage } from '../../src/ui/validation';
 import { rankedScores, type Score } from '../../src/ui/Leaderboard';
+import { Sniffer, type SnifferState } from '../../src/sniffer/sniffer';
+import { snifferStatus } from '../../src/sniffer/SnifferStatus';
 
 Object.assign(globalThis, {
     localStorage: window.localStorage,
@@ -35,6 +37,8 @@ function mockApi() {
         getConnectionState: async () => ({ connected: true, message: '' }),
         onConnectionState: () => () => {},
         getVersion: async () => '1.12.0-beta1',
+        getWindowSize: async () => ({ width: 1024, height: 768 }),
+        setWindowSize: async (size: { width: number; height: number }) => size,
         getHost: async () => 'https://example.invalid',
         storeGet: async (key: string) => stored.get(key) ?? null,
         storeSet: async (key: string, value: unknown) => {
@@ -87,7 +91,7 @@ test('one authenticated app survives navigation and logout without reinitializin
             </MemoryRouter>
         </StrictMode>,
     );
-    await screen.findByText(/Choose your Steam folder/);
+    await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /Choose your Steam folder/));
     assert.equal(calls.filter((call) => call === 'prepare').length, 1);
     assert.equal(calls.filter((call) => call === 'authenticate.php').length, 1);
 
@@ -129,6 +133,67 @@ test('account cooldown disables the React form while older responses remain usab
     }
 });
 
+test('header status follows the shared reader across tabs and pauses in Config', async () => {
+    mockApi();
+    window.api.resolveRocksmithConfig = async () => {};
+    const originalCreate = Sniffer.create;
+    let state = { activity: 'waiting', error: null, scoreRevision: 0 } as SnifferState;
+    const listeners = new Set<() => void>();
+    let starts = 0;
+    let stops = 0;
+    const engine = {
+        getSnapshot: () => state,
+        subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
+        start: () => { starts++; },
+        stop: () => { stops++; },
+    } as unknown as Sniffer;
+    Sniffer.create = async () => engine;
+
+    try {
+        render(<MemoryRouter initialEntries={['/search']}><App /></MemoryRouter>);
+        await screen.findByRole('link', { name: 'Sniffer' });
+        await waitFor(() => assert.equal(starts, 1));
+        await waitFor(() => assert.equal(listeners.size, 2));
+        const dot = () => document.querySelector('.sniffer-status-dot')!.getAttribute('data-color');
+        assert.equal(dot(), 'orange');
+
+        act(() => {
+            state = { ...state, activity: 'sniffing' };
+            listeners.forEach(listener => listener());
+        });
+        assert.equal(dot(), 'green');
+        fireEvent.click(screen.getByRole('link', { name: 'Profile' }));
+        await screen.findByRole('heading', { name: 'Profile' });
+        assert.equal(starts, 1);
+        assert.equal(dot(), 'green');
+
+        act(() => {
+            state = { ...state, activity: 'error', error: 'Reader disconnected' };
+            listeners.forEach(listener => listener());
+        });
+        assert.equal(dot(), 'red');
+        assert.equal(document.getElementById('sniffer-status-tooltip')!.textContent, 'Reader disconnected');
+        fireEvent.click(screen.getByRole('link', { name: 'Config' }));
+        await screen.findByRole('heading', { name: 'Config' });
+        assert.equal(dot(), 'orange');
+        assert.equal(document.getElementById('sniffer-status-tooltip')!.textContent, 'Paused while Config is open.');
+        assert.equal(stops, 1);
+        fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+        await screen.findByRole('link', { name: 'Sign in' });
+        assert.equal(document.querySelector('.sniffer-status-dot'), null);
+    } finally {
+        cleanup();
+        Sniffer.create = originalCreate;
+    }
+});
+
+test('lurk mode and paused songs do not claim to be recording', () => {
+    const state = { activity: 'sniffing', lurkMode: true } as SnifferState;
+    assert.equal(snifferStatus(false, undefined, state).color, 'orange');
+    assert.match(snifferStatus(false, undefined, state).message, /not recorded/);
+    assert.equal(snifferStatus(false, undefined, { ...state, lurkMode: false, activity: 'paused' }).color, 'orange');
+});
+
 test('config saves quick edits in order without disabling unrelated controls', async () => {
     const { stored } = mockApi();
     window.api.resolveRocksmithConfig = async () => {};
@@ -166,6 +231,28 @@ test('config saves quick edits in order without disabling unrelated controls', a
     assert.equal(stored.get('user_data.1.extra_logging'), true);
 });
 
+test('path rankings show crowns without rendering numeric false flags as zeroes', async () => {
+    mockApi();
+    const request = window.api.requestBackend;
+    const ranks = [
+        { user_id: 1, username: 'Crowned', king: 1, points: 42 },
+        { user_id: 2, username: 'Player', king: 0, points: 12 },
+    ];
+    window.api.requestBackend = async (url, data) => {
+        if (url.endsWith('get_ranks_top3.php')) return { overall: ranks, lead: ranks, rhythm: [], bass: [] };
+        if (url.endsWith('get_ranks_lead.php')) return ranks;
+        return request(url, data);
+    };
+    render(<MemoryRouter initialEntries={['/rank']}><App /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Show all lead rankings' }));
+    await screen.findByRole('cell', { name: 'Player' });
+    const dialog = screen.getByRole('dialog', { name: 'Lead rankings' });
+    const cells = dialog.querySelectorAll('tbody tr td:nth-child(2)');
+    assert.equal(cells[0].textContent, 'Crowned');
+    assert.equal(cells[1].textContent, 'Player');
+    assert.equal(dialog.querySelectorAll('img[alt="King"]').length, 1);
+});
+
 test('a failed config save restores its value and does not block the next edit', async () => {
     const { stored } = mockApi();
     window.api.resolveRocksmithConfig = async () => {};
@@ -185,6 +272,37 @@ test('a failed config save restores its value and does not block the next edit',
     await waitFor(() => assert.equal(stored.get('user_data.1.extra_logging'), true));
     assert.equal((logging as HTMLInputElement).checked, true);
     assert.equal(screen.queryByText('Could not save setting'), null);
+});
+
+test('window dimensions apply together, reject invalid input and recover from resize failures', async () => {
+    mockApi();
+    window.api.resolveRocksmithConfig = async () => {};
+    const requests: { width: number; height: number }[] = [];
+    window.api.setWindowSize = async size => {
+        requests.push(size);
+        if (requests.length === 1) throw new Error('Exit full screen before changing the window size.');
+        return { width: 950, height: 540 };
+    };
+    render(<MemoryRouter initialEntries={['/config']}><App /></MemoryRouter>);
+    const width = await screen.findByRole('spinbutton', { name: 'Width' }) as HTMLInputElement;
+    const height = screen.getByRole('spinbutton', { name: 'Height' }) as HTMLInputElement;
+    const apply = screen.getByRole('button', { name: 'Apply size' }) as HTMLButtonElement;
+    assert.equal(width.value, '1024');
+    assert.equal(height.value, '768');
+
+    fireEvent.change(width, { target: { value: '' } });
+    assert.equal(apply.disabled, true);
+    fireEvent.change(width, { target: { value: '960' } });
+    fireEvent.change(height, { target: { value: '540' } });
+    assert.equal(requests.length, 0);
+    fireEvent.click(apply);
+    await screen.findByText('Exit full screen before changing the window size.');
+    assert.deepEqual(requests, [{ width: 960, height: 540 }]);
+
+    fireEvent.click(apply);
+    await waitFor(() => assert.equal(width.value, '950'));
+    assert.equal(height.value, '540');
+    assert.equal(apply.disabled, false);
 });
 
 test('header sign out clears the session and offers sign in from Support', async () => {

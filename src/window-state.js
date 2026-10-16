@@ -1,14 +1,38 @@
 const DEFAULT_SIZE = { width: 1024, height: 768 };
+const { MINIMUM_SIZE, MAXIMUM_SIZE } = require('./window-size');
 
 // Reject invalid settings before passing dimensions to Electron.
 function validWindowSize(width, height) {
     return Number.isSafeInteger(width) && Number.isSafeInteger(height)
-        && width >= 400 && height >= 300;
+        && width >= MINIMUM_SIZE.width && height >= MINIMUM_SIZE.height;
+}
+
+// Resize the normal window while keeping its position and existing persistence behavior.
+function applyWindowSize(win, width, height) {
+    if (!validWindowSize(width, height) || width > MAXIMUM_SIZE || height > MAXIMUM_SIZE) {
+        throw new Error(`Enter whole numbers: width ${MINIMUM_SIZE.width}–${MAXIMUM_SIZE} and height ${MINIMUM_SIZE.height}–${MAXIMUM_SIZE}.`);
+    }
+    if (!win || win.isDestroyed()) throw new Error('The window is no longer available.');
+    if (win.isFullScreen()) throw new Error('Exit full screen before changing the window size.');
+
+    const bounds = win.getNormalBounds();
+    if (win.isMaximized()) win.unmaximize();
+    win.setBounds({ ...bounds, width, height });
+
+    // Report the actual dimensions in case the operating system adjusted them.
+    const actual = win.getNormalBounds();
+    return { width: actual.width, height: actual.height };
 }
 
 // Restore the saved rectangle, keeping its title bar reachable on an available display.
 function restoreWindowState(saved, screen) {
-    const size = validWindowSize(saved?.width, saved?.height) ? saved : DEFAULT_SIZE;
+    // Grow older small windows to the new minimum without discarding their position.
+    const hasSize = Number.isSafeInteger(saved?.width) && saved.width > 0
+        && Number.isSafeInteger(saved?.height) && saved.height > 0;
+    const size = hasSize ? {
+        width: Math.max(MINIMUM_SIZE.width, saved.width),
+        height: Math.max(MINIMUM_SIZE.height, saved.height),
+    } : DEFAULT_SIZE;
     const positioned = Number.isSafeInteger(saved?.x) && Number.isSafeInteger(saved?.y);
     const bounds = { width: size.width, height: size.height };
 
@@ -122,4 +146,4 @@ function trackWindowState(win, store, screen, initialState, timers = globalThis)
     });
 }
 
-module.exports = { restoreWindowState, trackWindowState, validWindowSize };
+module.exports = { restoreWindowState, trackWindowState, validWindowSize, applyWindowSize };
