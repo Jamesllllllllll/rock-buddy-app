@@ -36,7 +36,7 @@ const product = beta ? 'Beta' : 'Staging';
     // The Linux song preview must never replace real gameplay in an installer.
     assert.equal(metadata.main, './src/main.js');
     assert.ok(!listPackage(asar).some(file => /(?:song-preview|[/\\]\.generated[/\\])/.test(file)));
-    const renderer = extractFile(asar, 'dist/ui/bundle.js').toString('utf8');
+    const renderer = extractFile(asar, path.join('dist', 'ui', 'bundle.js')).toString('utf8');
     for (const marker of ['PreviewLead', 'PreviewPlayer', 'PreviewRhythm', 'song-preview']) {
         assert.ok(!renderer.includes(marker), `Preview code must not ship: ${marker}`);
     }
