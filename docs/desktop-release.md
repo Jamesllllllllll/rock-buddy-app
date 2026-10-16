@@ -194,21 +194,21 @@ gameplay, upgrade, or PayPal sandbox acceptance below.
 
 ## Beta6 candidate
 
-`1.12.0-beta6` adds saved Sniffer column widths, ordering and font choices.
+The published test build `1.12.0-beta6` adds saved Sniffer column widths, ordering and font choices.
 Column headings stay visible at the minimum width. The header paintbrush opens
 one theme dropdown, including the custom-color editor. Live Feed, Snort and column
 controls follow each theme; verified checkmarks have stronger contrast, and your
 score row has a subtle highlight instead of the pulsing white glow.
 
-Build and publish this candidate only through the manual Beta workflow. It keeps
+This candidate was built and published through the manual Beta workflow. It keeps
 the rehearsal backend, sandbox PayPal and existing Beta installation/settings.
 Windows acceptance should focus on the upgrade from beta5, retained preferences,
 column controls and a verified song while browsing other tabs. Already completed
 checks can carry forward when their implementation has not changed.
 
-## Beta5 candidate
+## Beta5 history
 
-The published test build is `1.12.0-beta5`. It restores exact Width/Height controls in
+The previous test build was `1.12.0-beta5`. It restored exact Width/Height controls in
 Config, sets a 640 × 480 minimum window, and makes ranking cards adapt to two
 columns in smaller windows. It fixes stray zeroes beside uncrowned/unverified
 players and adds a Sniffer header indicator: green for tracking, orange for
@@ -260,17 +260,20 @@ assets available while updating the feed; upload the new files first and replace
 `beta.yml` last. No credentials are embedded in this public feed. An unpublished
 or missing feed is logged and retried by automatic checks; it is not a working update test.
 
-The feed now offers `1.12.0-beta5`; the older beta1 through beta4 installers
-remain available. The [beta5 build](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38849571476)
-(source `3f88dc7`) passed all 103 tests, the Windows native build, packaging,
+The feed now offers `1.12.0-beta6`; the older beta1 through beta5 installers
+remain available. The [beta6 build](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38854466790)
+(source `b7a4882`) passed all 110 tests, the Windows native build, packaging,
 installed startup/rehearsal routing and settings-isolation checks, and update-file
-validation. The installer and blockmap digests match GitHub's uploaded assets,
-and the published update manifest matches the checked build. Actions artifacts
-alone are not an updater feed.
+validation. The installed archive check also rejects Linux song-preview files and
+fake-player markers; the preview stays local and is not part of the installer.
+The public installer returns HTTP 200, GitHub asset digests match the checked build,
+and the published update manifest matches its installer checksum.
+Actions artifacts alone are not an updater feed.
 
-Beta5 remains connected to rehearsal, with sandbox PayPal, and preserves the
-existing beta installation and settings. Precise resizing still needs Windows
-acceptance; a tiled Linux window can have its dimensions controlled by Hyprland.
+Beta6 remains connected to rehearsal, with sandbox PayPal, and preserves the
+existing beta installation and settings. Its changelog summarizes eight main
+changes. Precise resizing still needs Windows acceptance; a tiled Linux window
+can have its dimensions controlled by Hyprland.
 
 Leave an older Beta installed so its updater performs the upgrade. Restart the
 app to check immediately; beta3 also has Check for updates in the changelog.
