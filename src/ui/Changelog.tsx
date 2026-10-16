@@ -4,25 +4,14 @@ import { useDesktopState } from './useDesktopState';
 
 // These notes describe the code bundled with this installer, including beta builds.
 const currentChanges = [
-    'Resize and reorder Sniffer columns, choose a table font, and keep those preferences after restarting.',
-    'Choose a theme directly from the header paintbrush, including custom colors.',
-    'Clearer verified checkmarks, subtle score-row highlights and themed Live Feed, Snort and column controls.',
-    'A Sniffer status light in the header shows tracking, waiting, paused and error states.',
-    'Set precise window width and height in Config; the minimum window size is 640 × 480.',
-    'Rankings adapt to two columns in smaller windows, with text sized to each card.',
-    'Fixed stray zeroes beside players without a crown or verified score.',
-    'Automatic update downloads with a choice to restart now or later, plus a manual check in the changelog.',
-    'A shared header and footer that stay visible while only the page content scrolls.',
-    'Refreshed buttons, inputs and spacing across Dark, Light and Retro themes.',
-    'A Custom theme dialog with background, text, accent and panel colors, plus corner styles.',
-    'Sign in or sign out from the header; the Beta badge has been removed.',
-    'Config saves no longer make unrelated controls flash or become disabled.',
-    'Sniffing continues while browsing other pages; Config still pauses tracking.',
-    'Faster page navigation, cached results, loading states and clearer connection errors.',
-    'A Support page for one-time and monthly PayPal contributions.',
-    'Window size and position are remembered, and Sniffer columns can be shown or hidden.',
+    'Sniffing continues while browsing other pages, with a status light in the header; Config still pauses tracking.',
+    'Updates download automatically, with a choice to restart now or later. Click the version number for release notes and a manual update check.',
+    'Show, hide, resize and reorder Sniffer columns, choose a font, and keep your choices after restarting.',
+    'Refreshed themes, clearer score indicators and a header paintbrush for choosing or customizing colors.',
+    'Window size and position are remembered, with precise sizing in Config and rankings that adapt to smaller windows.',
+    'Faster navigation with cached results, clearer loading and connection errors, and a header and footer that stay visible.',
+    'Support Rock Buddy with one-time or monthly PayPal contributions from the app.',
     'Profile discovery and confirmation before importing history from a different profile.',
-    'A more compact Config page and release notes available from the version number.',
 ];
 
 // Summaries from the official GitHub release notes; missing versions are omitted.
