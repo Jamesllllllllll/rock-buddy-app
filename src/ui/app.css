@@ -105,6 +105,14 @@ body {
 .app-shell input:focus {
     box-shadow: none;
 }
+/* Dark text fields share the dropdowns' purple surface and border. */
+.app-shell[data-theme="dark"] input:where(:not([type]), [type="text"], [type="email"], [type="password"], [type="search"], [type="url"], [type="tel"], [type="number"]) {
+    background: var(--select-background);
+    color: var(--select-text);
+    border-color: var(--select-border);
+    border-radius: 6px;
+    color-scheme: dark;
+}
 .navtop {
     /* Navigation stays outside the content's scrolling area. */
     position: relative;
