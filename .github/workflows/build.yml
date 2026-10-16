@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       installer:
-        description: Build a test installer only when explicitly requested
+        description: beta = rehearsal; production-beta = official prerelease; production = stable
         type: choice
-        options: [none, beta, production]
+        options: [none, beta, production-beta, production]
         default: none
       version:
-        description: Installer version, e.g. 1.12.0-beta1 (must increase for update testing)
+        description: beta uses 1.12.0-beta7; production-beta uses 1.12.0-beta.7; production uses 1.12.0
         type: string
         default: ''
 
@@ -79,9 +79,11 @@ jobs:
         env:
           ROCK_BUDDY_PACKAGE_TARGET: ${{ inputs.installer }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Install and check beta
-        if: github.event_name == 'workflow_dispatch' && inputs.installer == 'beta'
-        run: node tooling/smoke-staging-installer.cjs --beta
+      - name: Install and check installer
+        if: github.event_name == 'workflow_dispatch' && inputs.installer != 'none'
+        run: node tooling/smoke-staging-installer.cjs
+        env:
+          ROCK_BUDDY_PACKAGE_TARGET: ${{ inputs.installer }}
       - name: Validate update files and write checksums
         if: github.event_name == 'workflow_dispatch' && inputs.installer != 'none'
         run: node tooling/check-installer.cjs

@@ -147,8 +147,9 @@ by default; activation/reset email delivery is not covered by this setup.
 - `npm run start:staging`: separate backend staging, not the imported rehearsal database.
 - `npm start`: production backend. `npm run dev`: legacy Pi backend.
 - Do not run `npm run release` for setup: it cleans ignored files and packages a
-  release. A packaged Beta installer is locked to rehearsal and cannot
-  replace this local source launch.
+  release. A packaged rehearsal Beta (`installer=beta`) is locked to rehearsal.
+  `installer=production-beta` is an official prerelease using production, the regular
+  app identity/settings and TNT's update feed; it is not a rehearsal installer.
 - Run `npm test` and `npm run build` for desktop code changes. Report Windows or
   gameplay checks that were not actually performed.
 - Keep this task local: no deployments, releases, pushes, Cloudflare changes, or

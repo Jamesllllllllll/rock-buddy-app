@@ -54,3 +54,23 @@ test('credentials cannot be forwarded to a different host and redirects are disa
     await client.post(url, {});
     assert.equal(called, true);
 });
+
+test('standard beta versions keep the existing API wire format without changing UI data', async () => {
+    const versions = [
+        ['1.12.0-beta.7', '1.12.0-beta7'],
+        ['1.12.0-beta.10', '1.12.0-beta10'],
+        ['1.12.0-beta6', '1.12.0-beta6'],
+        ['1.12.0', '1.12.0'],
+    ];
+    for (const [version, expected] of versions) {
+        let sent;
+        const client = createBackendClient(host, { fetchImpl: async (_url, options) => {
+            sent = JSON.parse(options.body);
+            return Response.json({ success: true });
+        } });
+        const data = { version, auth_data: { user_id: 1 }, mastery: 0.95 };
+        await client.post(url, data);
+        assert.deepEqual(sent, { ...data, version: expected });
+        assert.equal(data.version, version);
+    }
+});

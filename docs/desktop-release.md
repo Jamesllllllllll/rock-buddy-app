@@ -33,33 +33,41 @@ advertised as fixed by this release.
 
 ## Release sequence
 
-1. Review the draft PR and pass its Windows tests/build. Keep it draft until the
-   acceptance checks below are recorded against the actual candidate. A merge or
-   push does not publish a release or build an installer.
-2. Manually build a Beta installer from the reviewed branch with a version higher
-   than the existing Beta. Test it against rehearsal using the checklist below,
-   including gameplay on other tabs, account switching, connection loss, window
-   restoration, and PayPal sandbox. Rehearsal scores do not reach production.
-3. Build and deliberately publish a higher Beta to the separate test update feed.
-   Prove A → B download, Restart later, install/restart, settings retention and a fresh
-   score upload on Windows. Automated updater tests alone do not prove this.
-4. Resolve failures, record results, then mark the PR ready and merge after TNT's
-   review. Manually build the stable production candidate, for example 1.12.0,
-   from the merged commit. Create an unpublished draft release in TNT's repo.
-5. Before publishing, test that production candidate over an existing 1.11.0
-   install on a Windows test machine. Check retained login/settings/addons,
-   production routing and a real verified score. This is separate from Beta
-   testing because Beta has its own installation and data. Record installer
-   prompts; code signing is not configured. If fixes are needed, rebuild and
-   repeat the affected checks before publishing.
-6. Upload the installer, blockmap, latest.yml and checksums from that same build to
-   the draft. Verify the version and feed assets, then publish as the latest
-   stable release. Confirm 1.11.0 shows its download notification and an installed
-   new version can check the official feed. Keep previous release assets available.
-7. Post the announcement below with the official release page. Monitor reported
-   startup, login, gameplay/upload and updater failures. Pause further releases
-   if a regression appears; publish a tested higher patch version for recovery.
-   The updater intentionally does not downgrade users.
+1. Test the rehearsal Beta and record the remaining Windows checks. Tests already
+   completed on this React version carry forward unless related code changes.
+2. Prepare a production-connected candidate with `installer=production-beta` and
+   a standard version such as `1.12.0-beta.7`. This keeps regular Rock Buddy's
+   identity, settings, production API/PayPal and TNT's GitHub updater feed. A test
+   release in the fork is a manual download, separate from the rehearsal feed.
+3. Test that candidate over a regular 1.11.0 install: retained login/settings,
+   one verified production score while browsing other tabs, and Config pause/resume.
+   Enable **Config → Advanced Config → Beta Testing** to receive official betas.
+   The existing preference is respected; opting out waits for a newer stable release.
+4. Keep PR #89 draft until acceptance is recorded, then mark it ready for TNT to
+   review and merge into `main`. Merging runs checks, not installer publication.
+5. In TNT's repository, manually run **Build** on `main` with
+   `installer=production-beta` and a higher version, for example `1.12.0-beta.8`
+   after testing the fork's `beta.7`. Download the checked artifact and test it.
+6. Create a draft GitHub release tagged **v1.12.0-beta.8**, targeting the exact
+   build commit. Attach its EXE, blockmap, `beta.yml`, `latest.yml` and checksums;
+   mark **Set as a pre-release** and do not mark it as the latest stable release.
+   Publish only after Windows acceptance, then verify the installed candidate can
+   update from the official feed. Rehearsal installations do not cross to production.
+7. After the public beta is accepted, build `installer=production`, version `1.12.0`,
+   from the reviewed merged commit. Test it, then publish its EXE, blockmap,
+   `latest.yml` and checksums as the official stable release. Verify the beta can
+   update to stable and 1.11.0 shows its existing download notification.
+
+If **Run workflow** is missing because the repository's default branch is still
+`develop`, TNT can dispatch the merged workflow explicitly with GitHub CLI:
+
+```sh
+gh workflow run build.yml --repo tnt-coders/rock-buddy-app --ref main -f installer=production-beta -f version=1.12.0-beta.8
+```
+
+GitHub CLI must be installed and signed in (`gh auth login`). A maintainer can
+also add the manual workflow to the default branch; changing the default branch
+is not necessary. Builds never publish automatically. Keep older releases available.
 
 The public backend is already live. This release needs no database import, domain
 change, or coordinated backend downtime. Existing desktop versions can continue
@@ -89,7 +97,8 @@ An installer requires a manual **Build → Run workflow** with `installer=beta`
 and a version such as `1.12.0-beta1`. The next update test must use a higher version,
 such as `1.12.0-beta2`. The job installs and checks the beta on a disposable Windows
 runner, validates update-file checksums, and uploads one artifact retained for
-seven days. Production packaging is also manual and requires a stable version.
+seven days. Official prerelease packaging uses `installer=production-beta` with `X.Y.Z-beta.N`;
+`installer=production` requires a stable `X.Y.Z` version.
 Nothing publishes automatically, even after a merge.
 
 The fork's old `feat/community-beta`, `feat/staging-backend`, and `prep/*` branches
@@ -122,7 +131,7 @@ and [release limits](https://docs.github.com/en/repositories/releasing-projects-
 
 ## Test environment
 
-The Beta installer connects only to
+The rehearsal Beta installer (`installer=beta`) connects only to
 `https://rock-buddy-site-rehearsal.tntmusicstudios-c64.workers.dev`.
 It reuses the existing July database import, separate from production. On October 13,
 the database had 476 accounts and 394,614 Learn a Song score rows. This is real imported
@@ -248,8 +257,10 @@ Ordinary app exit never installs an update. Restart now remains subject to the
 main process's gameplay/upload checks; a blocked or failed restart leaves the
 choice available with an explanation.
 
-Production uses `tnt-coders/rock-buddy-app` releases and respects the user's beta
-preference. No downgrade is allowed. The test installer uses a separate generic
+Production and official prereleases use `tnt-coders/rock-buddy-app` releases and
+respect the user's Beta Testing preference. Official versions use `beta.N` so GitHub
+can select the next beta and later stable release. Only the API request version
+is translated to the existing `betaN` syntax; no backend deployment is required. No downgrade is allowed. The test installer uses a separate generic
 feed at the fork's `desktop-beta` release and never installs production builds.
 Source/local/custom-server launches cannot update themselves.
 
@@ -291,18 +302,15 @@ check inside the changelog.
 Verify B, retained configuration, and a new score upload. Also test interrupted
 download/retry, no newer version, no downgrade, and clicking install during a song.
 
-For public release, manually create a draft release in TNT's repo, upload the
-production installer, `.blockmap`, `latest.yml` and checksums from the same build,
-and publish only after acceptance. Existing 1.11.0 users see their existing download
-notification and must install the first updater-capable version manually. Later
-versions can download/install/restart inside the app. Signing is not configured;
-Windows installer/publisher prompts still need acceptance testing.
+For an official beta, attach both `beta.yml` and `latest.yml` from the same
+`production-beta` build. The GitHub provider reads `beta.yml` from prerelease tags;
+normal stable releases use `latest.yml`. Use standard version tags (`v1.12.0-beta.8`),
+not the fork's moving `desktop-beta` tag. See the release sequence above.
 
-The official release comes from `tnt-coders/rock-buddy-app`, not the fork: merge
-PR #89 after acceptance, then run its manual workflow with `installer=production`
-and the selected stable version. Publish the checked artifacts in that repository.
-The production package already points at TNT's GitHub update feed and the live
-backend. Merging runs checks only; it does not build or publish an installer.
+Existing 1.11.0 users must manually install their first updater-capable version.
+The rehearsal app remains a separate installation; its settings and scores are not
+migrated by installing the official candidate. Code signing is not configured,
+so check Windows installer/publisher prompts during acceptance.
 
 ## Acceptance before public release
 
@@ -336,7 +344,7 @@ backend. Merging runs checks only; it does not build or publish an installer.
   immediate close and reopen.
   Existing account dimensions are used as a fallback on the first launch. Native
   Wayland positioning is controlled by the compositor and is not a Windows test.
-- Upgrade existing regular 1.11.0 to the production candidate on Windows, preserving
+- Upgrade existing regular 1.11.0 to the production or official-beta candidate on Windows, preserving
   login, settings, addons and install identity. This is separate from Beta upgrades.
 - Confirm linking once, restart, switch accounts/profiles, decline alternate history,
   approve it, and return to the original. History is still imported per song.

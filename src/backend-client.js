@@ -27,10 +27,15 @@ function createBackendClient(host, { fetchImpl = fetch, now = Date.now, onState 
         pending++;
 
         try {
+            // The legacy API expects beta7 while GitHub updates require beta.7.
+            const version = typeof data?.version === 'string'
+                ? data.version.replace(/^(\d+\.\d+\.\d+-beta)\.(\d+)$/, '$1$2')
+                : data?.version;
+            const payload = version !== data?.version ? { ...data, version } : data;
             const response = await fetchImpl(destination.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
+                body: JSON.stringify(payload),
                 signal: AbortSignal.timeout(5000),
                 redirect: 'error',
             });

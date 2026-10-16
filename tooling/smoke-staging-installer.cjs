@@ -8,13 +8,17 @@ const { createCipheriv } = require('node:crypto');
 const { deflateSync } = require('node:zlib');
 const { extractFile, listPackage } = require('@electron/asar');
 const { HOSTS } = require('../src/backend-config');
-const beta = process.argv.includes('--beta');
-const channel = beta ? 'beta' : 'staging';
+const yaml = require('js-yaml');
+const target = process.env.ROCK_BUDDY_PACKAGE_TARGET || (process.argv.includes('--beta') ? 'beta' : 'staging');
+assert.ok(['beta', 'staging', 'production-beta', 'production'].includes(target));
+const beta = target === 'beta';
+const production = target.startsWith('production');
+const channel = production ? 'production' : target;
 const product = beta ? 'Beta' : 'Staging';
 
 (async () => {
     assert.equal(process.platform, 'win32');
-    const out = path.resolve(`release/${channel}`);
+    const out = path.resolve(`release/${target}`);
     const installers = fs.readdirSync(out).filter(name => name.endsWith('-Setup.exe'));
     assert.equal(installers.length, 1, 'Exactly one installer expected');
     const install = path.join(os.tmpdir(), `rock-buddy-${channel}-smoke`);
@@ -29,9 +33,19 @@ const product = beta ? 'Beta' : 'Staging';
     assert.equal(result.status, 0, 'NSIS install must succeed');
     const asar = path.join(install, 'resources/app.asar');
     const metadata = JSON.parse(extractFile(asar, 'package.json'));
-    assert.equal(metadata.name, `rock-buddy-${channel}`);
+    assert.equal(metadata.name, production ? 'rock-buddy' : `rock-buddy-${channel}`);
     assert.equal(metadata.rockBuddyBackend, channel);
     assert.ok(!listPackage(asar).some(file => /(?:\.private|\.env|rock_buddy_log|node_modules\/\.cache)/.test(file)));
+
+    const updateFeed = yaml.load(fs.readFileSync(path.join(install, 'resources/app-update.yml'), 'utf8'));
+    if (production) {
+        assert.equal(updateFeed.provider, 'github');
+        assert.equal(updateFeed.owner, 'tnt-coders');
+        assert.equal(updateFeed.repo, 'rock-buddy-app');
+    } else if (beta) {
+        assert.equal(updateFeed.provider, 'generic');
+        assert.equal(updateFeed.url, 'https://github.com/Jamesllllllllll/rock-buddy-app/releases/download/desktop-beta/');
+    }
 
     // The Linux song preview must never replace real gameplay in an installer.
     assert.equal(metadata.main, './src/main.js');
@@ -62,7 +76,8 @@ const product = beta ? 'Beta' : 'Staging';
     cipher.setAutoPadding(false);
     fs.writeFileSync(path.join(remote, 'LocalProfiles.json'), Buffer.concat([Buffer.alloc(20), cipher.update(padded), cipher.final()]));
     fs.writeFileSync(path.join(remote, 'ci-profile_PRFLDB'), 'synthetic profile placeholder');
-    const child = spawn(path.join(install, `RockBuddy${product}.exe`), ['--remote-debugging-port=9333'], {
+    const executable = production ? 'rock-buddy.exe' : `RockBuddy${product}.exe`;
+    const child = spawn(path.join(install, executable), ['--remote-debugging-port=9333'], {
         cwd: os.tmpdir(), stdio: 'ignore',
     });
     let socket;
@@ -98,7 +113,7 @@ const product = beta ? 'Beta' : 'Staging';
                     await window.api.storeDelete('auth_data');
                     const host = await window.api.getHost();
                     const version = await window.api.getVersion();
-                    const bridgeProbe = await window.api.requestBackend(host + '/api/auth/login.php', {version});
+                    const bridgeProbe = ${production} ? null : await window.api.requestBackend(host + '/api/auth/login.php', {version});
                     return {bridgeProbe, hasLogin: !!document.querySelector('input[autocomplete="username"]'), host, notice: document.getElementById('beta-notice')?.textContent, version: await window.api.getVersion(),
                         sentinel: await window.api.storeGet('stagingSmokeSentinel'), detected};
                 })()`,
@@ -108,21 +123,24 @@ const product = beta ? 'Beta' : 'Staging';
         assert.ok(!response.error && !response.result?.exceptionDetails,
             'Preload/renderer check failed: ' + JSON.stringify(response.error || response.result?.exceptionDetails));
         assert.equal(response.result.result.value.host, HOSTS[channel]);
+        assert.equal(response.result.result.value.version, metadata.version);
         assert.equal(response.result.result.value.hasLogin, true);
-        assert.ok(response.result.result.value.bridgeProbe.error);
+        if (!production) assert.ok(response.result.result.value.bridgeProbe.error);
         if (beta) {
             assert.equal(response.result.result.value.notice, undefined, 'The header no longer shows a Beta badge');
             const windowTitle = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
                 `(Get-Process -Id ${child.pid}).MainWindowTitle`], { encoding: 'utf8' });
             assert.match(windowTitle.stdout, /Rock Buddy Beta v\d+\.\d+\.\d+-beta\d+/);
         }
-        assert.equal(response.result.result.value.sentinel, null);
+        assert.equal(response.result.result.value.sentinel, production ? true : null);
         for (const config of response.result.result.value.detected) {
             assert.equal(config?.profilePath, path.join(remote, 'ci-profile_PRFLDB'), 'Fresh accounts discover the profile without Config');
         }
         // The bridge performs backend requests; the renderer cannot fetch credentials externally.
-        const error = response.result.result.value.bridgeProbe.error;
-        assert.ok(['Invalid JSON data.', 'Rock Buddy is undergoing maintenance. Please try again later.'].includes(error));
+        if (!production) {
+            const error = response.result.result.value.bridgeProbe.error;
+            assert.ok(['Invalid JSON data.', 'Rock Buddy is undergoing maintenance. Please try again later.'].includes(error));
+        }
         if (beta) {
             const screenshot = await new Promise((resolve, reject) => {
                 const timer = setTimeout(() => reject(new Error('Screenshot timed out')), 10000);
@@ -135,9 +153,13 @@ const product = beta ? 'Beta' : 'Staging';
             assert.ok(screenshot.result?.data, 'Capture installed beta login screen');
             fs.writeFileSync(path.join(out, 'beta-login.png'), Buffer.from(screenshot.result.data, 'base64'));
         }
-        assert.equal(fs.readFileSync(productionConfig, 'utf8'), sentinel);
-        assert.ok(fs.existsSync(path.join(process.env.APPDATA, `rock-buddy-${channel}/config-${channel}.json`)));
-        console.log('NSIS install, packaged startup, backend routing, runtime bundling, production settings isolation, and fresh-account profile discovery passed.');
+        if (production) {
+            assert.equal(JSON.parse(fs.readFileSync(productionConfig, 'utf8')).stagingSmokeSentinel, true);
+        } else {
+            assert.equal(fs.readFileSync(productionConfig, 'utf8'), sentinel);
+            assert.ok(fs.existsSync(path.join(process.env.APPDATA, `rock-buddy-${channel}/config-${channel}.json`)));
+        }
+        console.log('NSIS install, packaged startup, backend routing, runtime bundling, settings preservation/isolation, update feed, mockup exclusion, and fresh-account profile discovery passed.');
     } finally {
         socket?.close();
         if (child.pid) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });

@@ -1,6 +1,6 @@
 const base = require('./package.json').build;
 const target = process.env.ROCK_BUDDY_PACKAGE_TARGET || 'beta';
-if (!['beta', 'production'].includes(target)) throw new Error('Choose beta or production packaging.');
+if (!['beta', 'production-beta', 'production'].includes(target)) throw new Error('Choose beta, production-beta or production packaging.');
 const beta = target === 'beta';
 
 // Reuse the established identities so upgrades preserve installed settings and shortcuts.
@@ -17,7 +17,7 @@ module.exports = {
     artifactName: beta ? 'Rock-Buddy-Beta-${version}-${arch}-Setup.${ext}' : 'Rock-Buddy-${version}-${arch}-Setup.${ext}',
     extraMetadata: {
         name: beta ? 'rock-buddy-beta' : 'rock-buddy',
-        rockBuddyBackend: target,
+        rockBuddyBackend: beta ? 'beta' : 'production',
     },
     directories: { output: `release/${target}` },
     files: ['src/**/*', 'dist/**/*', 'images/**/*', 'media/**/*', 'package.json'],
@@ -35,5 +35,6 @@ module.exports = {
         provider: 'github',
         owner: 'tnt-coders',
         repo: 'rock-buddy-app',
+        releaseType: target === 'production-beta' ? 'prerelease' : 'release',
     },
 };
