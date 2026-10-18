@@ -698,13 +698,12 @@ function createWindow() {
         if (!profileImportDecisions.has(key)) {
             const allowed = await approveProfileImport(profile, async (action, candidate) => {
                 unchangedLogin();
-                const response = await fetch(host + '/api/account/rocksmith_profile.php', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ version: currentVersion, auth_data: auth, action, profile: candidate }),
-                    signal: AbortSignal.timeout(10000),
+                // Share version compatibility and connection handling with every other API call.
+                const data = await backendClient.post(host + '/api/account/rocksmith_profile.php', {
+                    version: currentVersion, auth_data: auth, action, profile: candidate,
                 });
-                if (!response.ok) throw new Error('Could not check your linked Rocksmith profile. Please try again.');
-                const data = await response.json();
+                unchangedLogin();
+                if (data.error) throw new Error(data.error);
                 if (!Object.hasOwn(data, 'profile')) throw new Error('Invalid Rocksmith profile response.');
                 return data;
             }, async (original, candidate) => {

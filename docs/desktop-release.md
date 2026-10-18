@@ -209,6 +209,11 @@ is published in the fork as a separate manual download. Install
 Beta. It uses production scores/accounts, live PayPal and TNT's update feed.
 Enable **Config → Advanced Config → Beta Testing** for future official prereleases.
 The next official build should use a higher version, such as `1.12.0-beta.8`.
+The published beta.7 has a profile-link startup bug: that request sends the dotted
+beta version directly, which production rejects. The branch now sends profile reads
+and links through the shared API client, matching login and score requests. This
+fix requires a replacement installer before continuing beta.7 gameplay acceptance.
+
 No official update can be tested end to end until TNT publishes that next version.
 
 [Windows build 38856113812](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38856113812)
