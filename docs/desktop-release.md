@@ -36,7 +36,7 @@ advertised as fixed by this release.
 1. Test the rehearsal Beta and record the remaining Windows checks. Tests already
    completed on this React version carry forward unless related code changes.
 2. Prepare a production-connected candidate with `installer=production-beta` and
-   a standard version such as `1.12.0-beta.7`. This keeps regular Rock Buddy's
+   a standard version such as `1.12.0-beta.8`. This keeps regular Rock Buddy's
    identity, settings, production API/PayPal and TNT's GitHub updater feed. A test
    release in the fork is a manual download, separate from the rehearsal feed.
 3. Test that candidate over a regular 1.11.0 install: retained login/settings,
@@ -46,9 +46,9 @@ advertised as fixed by this release.
 4. Keep PR #89 draft until acceptance is recorded, then mark it ready for TNT to
    review and merge into `main`. Merging runs checks, not installer publication.
 5. In TNT's repository, manually run **Build** on `main` with
-   `installer=production-beta` and a higher version, for example `1.12.0-beta.8`
-   after testing the fork's `beta.7`. Download the checked artifact and test it.
-6. Create a draft GitHub release tagged **v1.12.0-beta.8**, targeting the exact
+   `installer=production-beta` and a higher version, for example `1.12.0-beta.9`
+   after testing the fork's `beta.8`. Download the checked artifact and test it.
+6. Create a draft GitHub release tagged **v1.12.0-beta.9**, targeting the exact
    build commit. Attach its EXE, blockmap, `beta.yml`, `latest.yml` and checksums;
    mark **Set as a pre-release** and do not mark it as the latest stable release.
    Publish only after Windows acceptance, then verify the installed candidate can
@@ -62,7 +62,7 @@ If **Run workflow** is missing because the repository's default branch is still
 `develop`, TNT can dispatch the merged workflow explicitly with GitHub CLI:
 
 ```sh
-gh workflow run build.yml --repo tnt-coders/rock-buddy-app --ref main -f installer=production-beta -f version=1.12.0-beta.8
+gh workflow run build.yml --repo tnt-coders/rock-buddy-app --ref main -f installer=production-beta -f version=1.12.0-beta.9
 ```
 
 GitHub CLI must be installed and signed in (`gh auth login`). A maintainer can
@@ -203,21 +203,21 @@ gameplay, upgrade, or PayPal sandbox acceptance below.
 
 ## Production-connected test candidate
 
-[Rock Buddy 1.12.0-beta.7](https://github.com/Jamesllllllllll/rock-buddy-app/releases/tag/production-beta-1.12.0-beta.7)
+[Rock Buddy 1.12.0-beta.8](https://github.com/Jamesllllllllll/rock-buddy-app/releases/tag/production-beta-1.12.0-beta.8)
 is published in the fork as a separate manual download. Install
-`Rock-Buddy-1.12.0-beta.7-x64-Setup.exe` over regular Rock Buddy, not the rehearsal
+`Rock-Buddy-1.12.0-beta.8-x64-Setup.exe` over regular Rock Buddy, not the rehearsal
 Beta. It uses production scores/accounts, live PayPal and TNT's update feed.
 Enable **Config → Advanced Config → Beta Testing** for future official prereleases.
-The next official build should use a higher version, such as `1.12.0-beta.8`.
-The published beta.7 has a profile-link startup bug: that request sends the dotted
-beta version directly, which production rejects. The branch now sends profile reads
-and links through the shared API client, matching login and score requests. This
-fix requires a replacement installer before continuing beta.7 gameplay acceptance.
+The next official build should use a higher version, such as `1.12.0-beta.9`.
+Beta.8 fixes the beta.7 profile-link startup failure by using the shared API client
+for both profile reads and links. It also applies late update-check results to the
+instant-snort reward without restarting the sniffer. Download and install beta.8
+manually over beta.7; fork releases do not appear in TNT's automatic update feed.
 
 No official update can be tested end to end until TNT publishes that next version.
 
-[Windows build 38856113812](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/38856113812)
-at `c621bb0` passed 114 tests, the native build, actual NSIS installation/startup,
+[Windows build 39136791966](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/39136791966)
+at `18f4f36` passed 120 tests, the native build, actual NSIS installation/startup,
 production settings preservation, production routing, TNT update-feed configuration,
 profile discovery and mockup exclusion. The installer and update manifests have
 verified checksums; public downloads are available. CI performs no production
@@ -338,7 +338,7 @@ download/retry, no newer version, no downgrade, and clicking install during a so
 
 For an official beta, attach both `beta.yml` and `latest.yml` from the same
 `production-beta` build. The GitHub provider reads `beta.yml` from prerelease tags;
-normal stable releases use `latest.yml`. Use standard version tags (`v1.12.0-beta.8`),
+normal stable releases use `latest.yml`. Use standard version tags (`v1.12.0-beta.9`),
 not the fork's moving `desktop-beta` tag. See the release sequence above.
 
 Existing 1.11.0 users must manually install their first updater-capable version.
