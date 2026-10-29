@@ -159,7 +159,7 @@ Local mode is available separately and does not contain the imported database.
 The navigation header has no Beta badge. Test builds still use the separate Beta
 installation, rehearsal backend and test update feed; test changes are discarded.
 
-The Team page's Make a donation link opens a bundled desktop page with one-time/monthly choices and
+The Team page's one-time or monthly donation link opens a bundled desktop page with one-time/monthly choices and
 an amount in USD. Values below $5 disable checkout. No iframe or remote page is
 embedded. The main process retrieves the existing website form's signed state and
 submits its checkout request; HTML is never rendered in the app. This preserves

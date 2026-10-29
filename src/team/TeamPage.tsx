@@ -10,7 +10,7 @@ const members = [
 ];
 
 export function TeamPage() {
-    return <main className="center-page"><div className="card"><h1>Team Members</h1>
+    return <main className="team-page"><h1>Team Members</h1>
         <ul className="list-team-members">{members.map(([name, role, image]) => <li key={name}>
             <a href={`https://www.twitch.tv/${name.toLowerCase()}`} onClick={event => { event.preventDefault(); window.api.openExternalLink(event.currentTarget.href); }}>
                 <img src={`../images/${image}`} alt={name} /><span className="member-title">{name}</span><span className="member-title-hover">{role}</span>
@@ -19,8 +19,7 @@ export function TeamPage() {
         <section className="team-support" aria-labelledby="team-support-heading">
             <h2 id="team-support-heading">Support Rock Buddy</h2>
             <p>Community support makes Rock Buddy possible. Thank you for being part of it!</p>
-            <p>You can support Rock Buddy with a one-time or monthly donation.</p>
-            <Link to="/support" replace>Make a donation</Link>
+            <p>You can support Rock Buddy with a <Link to="/support" replace>one-time or monthly donation</Link>.</p>
         </section>
-    </div></main>;
+    </main>;
 }

@@ -1,6 +1,13 @@
+.team-page {
+    width: 100%;
+    max-width: 1024px;
+    margin: 8px auto 0;
+    text-align: center;
+}
+
 .team-support {
     margin: 16px auto 24px;
-    max-width: 560px;
+    max-width: 660px;
 }
 
 .team-support p {
@@ -19,7 +26,7 @@
   
   .list-team-members li {
     flex: 0 1 calc(33.333% - 40px); 
-    margin: 20px;
+    margin: 12px 20px;
     text-align: center;
     transition-duration: 0.3s;
   }

@@ -98,7 +98,7 @@ test('one authenticated app survives navigation and logout without reinitializin
     await screen.findByRole('textbox', { name: 'Search songs' });
     assert.ok(!screen.queryByRole('link', { name: 'Support' }));
     fireEvent.click(screen.getByRole('link', { name: 'Team' }));
-    fireEvent.click(await screen.findByRole('link', { name: 'Make a donation' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'one-time or monthly donation' }));
     await screen.findByRole('button', { name: 'Continue to PayPal' });
     fireEvent.click(screen.getByRole('link', { name: 'Back to Team' }));
     await screen.findByRole('heading', { name: 'Team Members' });
