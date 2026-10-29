@@ -226,10 +226,15 @@ Beta.9 includes the October 29 UI changes and retains the profile-link fix and
 instant-snort timing fix from beta.8. Install it manually over the existing
 production-connected beta; fork releases do not appear in TNT's automatic update feed.
 
+The beta.9 assets were replaced on October 29 with the final Team-page layout:
+the card is removed and the donation link is inline. The version remains
+`1.12.0-beta.9`; users who installed the earlier beta.9 must manually reinstall
+the refreshed download. The release tag points to the replacement build's source.
+
 No official update can be tested end to end until TNT publishes that next version.
 
-[Windows build 40818237779](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/40818237779)
-at `193cbb0` passed 121 tests, the native build, actual NSIS installation/startup,
+[Windows build 40823265338](https://github.com/Jamesllllllllll/rock-buddy-app/actions/runs/40823265338)
+at `fc62fb6` passed 121 tests, the native build, actual NSIS installation/startup,
 production settings preservation, production routing, TNT update-feed configuration,
 profile discovery and mockup exclusion. The installer and update manifests have
 verified checksums; public downloads are available. CI performs no production
