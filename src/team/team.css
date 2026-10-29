@@ -1,3 +1,12 @@
+.team-support {
+    margin: 16px auto 24px;
+    max-width: 560px;
+}
+
+.team-support p {
+    margin: 8px 0;
+}
+
 .list-team-members {
     max-width: 1024px;
     padding: 0;

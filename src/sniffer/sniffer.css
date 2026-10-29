@@ -44,11 +44,11 @@
 }
 
 .live-data {
-    border: 1px solid #3d3347;
-    background: #222222;
+    border: 2px solid #303030;
+    background: #22222280;
     color: inherit;
-    border-radius: 8px;
-    padding: 14px 16px;
+    border-radius: 12px;
+    padding: 10px;
 }
 
 .live-data .circle {

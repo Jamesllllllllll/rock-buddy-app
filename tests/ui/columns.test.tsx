@@ -160,9 +160,37 @@ test('invalid widths fall back safely and resetting widths leaves hidden columns
 
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('button', { name: 'Reset widths' }));
-    assert.equal(divider.getAttribute('aria-valuenow'), '180');
+    assert.equal((screen.getByRole('table') as HTMLTableElement).style.width, '');
+    assert.ok(!screen.getByRole('table').querySelector('colgroup'));
     assert.ok(!screen.queryByRole('columnheader', { name: 'Play Count' }));
-    assert.equal(JSON.parse(window.localStorage.getItem('sniffer-column-widths:1')!).username, 180);
+    assert.equal(window.localStorage.getItem('sniffer-column-widths:1'), null);
+});
+
+test('default columns fill the table naturally and first resize preserves the measured neighboring widths', async () => {
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    const widths = [90, 240, 200, 100, 110, 130];
+    HTMLElement.prototype.getBoundingClientRect = function () {
+        const rect = original.call(this);
+        if (this.tagName !== 'TH') return rect;
+        const index = [...this.parentElement!.children].indexOf(this);
+        return { ...rect, width: widths[index], x: 0, y: 0, top: 0, left: 0, right: widths[index], bottom: 20, height: 20, toJSON: () => ({}) };
+    };
+    try {
+        preview();
+        const divider = await screen.findByRole('separator', { name: 'Resize Username' });
+        assert.equal((screen.getByRole('table') as HTMLTableElement).style.width, '');
+        assert.ok(!screen.getByRole('table').querySelector('colgroup'));
+        assert.equal(divider.getAttribute('aria-valuenow'), '240');
+        fireEvent.keyDown(divider, { key: 'ArrowRight' });
+        const saved = JSON.parse(window.localStorage.getItem('sniffer-column-widths:1')!);
+        assert.equal(saved.username, 250);
+        assert.equal(saved.rank, 90);
+        assert.equal(saved.lastPlayed, 200);
+        assert.equal((screen.getByRole('table') as HTMLTableElement).style.width, '880px');
+    } finally {
+        cleanup();
+        HTMLElement.prototype.getBoundingClientRect = original;
+    }
 });
 
 

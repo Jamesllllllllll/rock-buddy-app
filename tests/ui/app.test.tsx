@@ -18,7 +18,6 @@ import { PageDataProvider } from '../../src/ui/PageData';
 import { usernameWaitMessage } from '../../src/ui/validation';
 import { rankedScores, type Score } from '../../src/ui/Leaderboard';
 import { Sniffer, type SnifferState } from '../../src/sniffer/sniffer';
-import { snifferStatus } from '../../src/sniffer/SnifferStatus';
 
 Object.assign(globalThis, {
     localStorage: window.localStorage,
@@ -97,8 +96,12 @@ test('one authenticated app survives navigation and logout without reinitializin
 
     fireEvent.click(screen.getByRole('link', { name: 'Search' }));
     await screen.findByRole('textbox', { name: 'Search songs' });
-    fireEvent.click(screen.getByRole('link', { name: 'Support' }));
+    assert.ok(!screen.queryByRole('link', { name: 'Support' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Team' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Make a donation' }));
     await screen.findByRole('button', { name: 'Continue to PayPal' });
+    fireEvent.click(screen.getByRole('link', { name: 'Back to Team' }));
+    await screen.findByRole('heading', { name: 'Team Members' });
     fireEvent.click(screen.getByRole('link', { name: 'Profile' }));
     await screen.findByRole('heading', { name: 'Verified 100% scores' });
     assert.equal(calls.filter((call) => call === 'prepare').length, 1);
@@ -133,11 +136,11 @@ test('account cooldown disables the React form while older responses remain usab
     }
 });
 
-test('header status follows the shared reader across tabs and pauses in Config', async () => {
+test('the shared reader survives tab navigation and pauses in Config', async () => {
     mockApi();
     window.api.resolveRocksmithConfig = async () => {};
     const originalCreate = Sniffer.create;
-    let state = { activity: 'waiting', error: null, scoreRevision: 0 } as SnifferState;
+    const state = { activity: 'waiting', error: null, scoreRevision: 0 } as SnifferState;
     const listeners = new Set<() => void>();
     let starts = 0;
     let stops = 0;
@@ -153,45 +156,20 @@ test('header status follows the shared reader across tabs and pauses in Config',
         render(<MemoryRouter initialEntries={['/search']}><App /></MemoryRouter>);
         await screen.findByRole('link', { name: 'Sniffer' });
         await waitFor(() => assert.equal(starts, 1));
-        await waitFor(() => assert.equal(listeners.size, 2));
-        const dot = () => document.querySelector('.sniffer-status-dot')!.getAttribute('data-color');
-        assert.equal(dot(), 'orange');
-
-        act(() => {
-            state = { ...state, activity: 'sniffing' };
-            listeners.forEach(listener => listener());
-        });
-        assert.equal(dot(), 'green');
+        await waitFor(() => assert.equal(listeners.size, 1));
         fireEvent.click(screen.getByRole('link', { name: 'Profile' }));
         await screen.findByRole('heading', { name: 'Profile' });
         assert.equal(starts, 1);
-        assert.equal(dot(), 'green');
-
-        act(() => {
-            state = { ...state, activity: 'error', error: 'Reader disconnected' };
-            listeners.forEach(listener => listener());
-        });
-        assert.equal(dot(), 'red');
-        assert.equal(document.getElementById('sniffer-status-tooltip')!.textContent, 'Reader disconnected');
         fireEvent.click(screen.getByRole('link', { name: 'Config' }));
         await screen.findByRole('heading', { name: 'Config' });
-        assert.equal(dot(), 'orange');
-        assert.equal(document.getElementById('sniffer-status-tooltip')!.textContent, 'Paused while Config is open.');
         assert.equal(stops, 1);
         fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
         await screen.findByRole('link', { name: 'Sign in' });
-        assert.equal(document.querySelector('.sniffer-status-dot'), null);
+        assert.equal(listeners.size, 0);
     } finally {
         cleanup();
         Sniffer.create = originalCreate;
     }
-});
-
-test('lurk mode and paused songs do not claim to be recording', () => {
-    const state = { activity: 'sniffing', lurkMode: true } as SnifferState;
-    assert.equal(snifferStatus(false, undefined, state).color, 'orange');
-    assert.match(snifferStatus(false, undefined, state).message, /not recorded/);
-    assert.equal(snifferStatus(false, undefined, { ...state, lurkMode: false, activity: 'paused' }).color, 'orange');
 });
 
 test('config saves quick edits in order without disabling unrelated controls', async () => {
@@ -274,7 +252,7 @@ test('a failed config save restores its value and does not block the next edit',
     assert.ok(!screen.queryByText('Could not save setting'));
 });
 
-test('window dimensions apply together, reject invalid input and recover from resize failures', async () => {
+test('window dimensions apply on change, reject invalid input and recover from resize failures', async () => {
     mockApi();
     window.api.resolveRocksmithConfig = async () => {};
     const requests: { width: number; height: number }[] = [];
@@ -286,23 +264,59 @@ test('window dimensions apply together, reject invalid input and recover from re
     render(<MemoryRouter initialEntries={['/config']}><App /></MemoryRouter>);
     const width = await screen.findByRole('spinbutton', { name: 'Width' }) as HTMLInputElement;
     const height = screen.getByRole('spinbutton', { name: 'Height' }) as HTMLInputElement;
-    const apply = screen.getByRole('button', { name: 'Apply size' }) as HTMLButtonElement;
+    assert.ok(!screen.queryByRole('button', { name: 'Apply size' }));
     assert.equal(width.value, '1024');
     assert.equal(height.value, '768');
 
     fireEvent.change(width, { target: { value: '' } });
-    assert.equal(apply.disabled, true);
-    fireEvent.change(width, { target: { value: '960' } });
-    fireEvent.change(height, { target: { value: '540' } });
+    fireEvent.change(width, { target: { value: '639' } });
+    fireEvent.change(width, { target: { value: '960.5' } });
+    fireEvent.change(width, { target: { value: '16385' } });
+    await act(async () => {});
     assert.equal(requests.length, 0);
-    fireEvent.click(apply);
+    fireEvent.change(width, { target: { value: '960' } });
     await screen.findByText('Exit full screen before changing the window size.');
-    assert.deepEqual(requests, [{ width: 960, height: 540 }]);
+    assert.deepEqual(requests, [{ width: 960, height: 768 }]);
 
-    fireEvent.click(apply);
+    fireEvent.change(height, { target: { value: '540' } });
     await waitFor(() => assert.equal(width.value, '950'));
     assert.equal(height.value, '540');
-    assert.equal(apply.disabled, false);
+    assert.deepEqual(requests[1], { width: 960, height: 540 });
+    assert.ok(!screen.queryByText('Exit full screen before changing the window size.'));
+});
+
+test('rapid window edits keep the latest values and cancel queued resizes when leaving Config', async () => {
+    mockApi();
+    window.api.resolveRocksmithConfig = async () => {};
+    type Size = { width: number; height: number };
+    const requests: Size[] = [];
+    const finish: ((size: Size) => void)[] = [];
+    window.api.setWindowSize = size => {
+        requests.push(size);
+        return new Promise(resolve => { finish.push(resolve); });
+    };
+    const view = render(<MemoryRouter initialEntries={['/config']}><App /></MemoryRouter>);
+    const width = await screen.findByRole('spinbutton', { name: 'Width' }) as HTMLInputElement;
+    const height = screen.getByRole('spinbutton', { name: 'Height' }) as HTMLInputElement;
+    fireEvent.change(width, { target: { value: '960' } });
+    await waitFor(() => assert.equal(requests.length, 1));
+    fireEvent.change(width, { target: { value: '980' } });
+    fireEvent.change(height, { target: { value: '540' } });
+    assert.equal(width.disabled, false);
+    await act(async () => { finish[0]({ width: 950, height: 768 }); });
+    assert.equal(width.value, '980');
+    assert.equal(height.value, '540');
+    assert.deepEqual(requests, [{ width: 960, height: 768 }, { width: 980, height: 540 }]);
+
+    fireEvent.change(height, { target: { value: '' } });
+    await act(async () => { finish[1]({ width: 980, height: 540 }); });
+    assert.equal(height.value, '');
+    fireEvent.change(height, { target: { value: '600' } });
+    await waitFor(() => assert.equal(requests.length, 3));
+    fireEvent.change(width, { target: { value: '1000' } });
+    view.unmount();
+    await act(async () => { finish[2]({ width: 980, height: 600 }); });
+    assert.equal(requests.length, 3);
 });
 
 test('header sign out clears the session and offers sign in from Support', async () => {
@@ -426,7 +440,7 @@ test('login is an explicit single action and persists only a validated session',
         fireEvent.submit(form);
         fireEvent.submit(form);
     });
-    await screen.findByRole('heading', { name: 'Sniffer' });
+    await screen.findByRole('heading', { name: 'Leaderboard Sniffer' });
     assert.equal(logins.length, 1);
     assert.deepEqual(logins[0], {
         username_or_email: 'Fixture',

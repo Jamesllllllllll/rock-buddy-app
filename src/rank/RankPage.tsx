@@ -108,8 +108,10 @@ export function RankPage() {
 
     return (
         <main>
-            <h1>Rank</h1>
-            <p id="disclaimer">Your rank is based on the verified scores you defeat or tie.</p>
+            <div className="rank-page-heading">
+                <h1>Rank</h1>
+                <p id="disclaimer">Your rank is based on the verified scores you defeat or tie.</p>
+            </div>
             <AsyncState {...ranks} retry={ranks.reload} />
             {king && (
                 <>

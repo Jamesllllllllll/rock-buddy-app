@@ -4,13 +4,14 @@ import { useDesktopState } from './useDesktopState';
 
 // These notes describe the code bundled with this installer, including beta builds.
 const currentChanges = [
-    'Sniffing continues while browsing other pages, with a status light in the header; Config still pauses tracking.',
+    'Sniffing continues while browsing other pages; Config still pauses tracking.',
     'Updates download automatically, with a choice to restart now or later. Click the version number for release notes and a manual update check.',
-    'Show, hide, resize and reorder Sniffer columns, choose a font, and keep your choices after restarting.',
+    'Sniffer columns fit the window by default. Show, hide, resize and reorder them, choose a font, and keep your choices after restarting.',
+    'Familiar Sniffer layout and compact controls, with full text available on hover for shortened Search fields.',
     'Refreshed themes, clearer score indicators and a header paintbrush for choosing or customizing colors.',
-    'Window size and position are remembered, with precise sizing in Config and rankings that adapt to smaller windows.',
+    'Window size and position are remembered. Width and Height changes in Config apply immediately, and rankings adapt to smaller windows.',
     'Faster navigation with cached results, clearer loading and connection errors, and a header and footer that stay visible.',
-    'Support Rock Buddy with one-time or monthly PayPal contributions from the app.',
+    'Support Rock Buddy with one-time or monthly PayPal contributions through the Team page.',
     'Profile discovery and confirmation before importing history from a different profile.',
 ];
 

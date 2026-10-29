@@ -25,46 +25,51 @@ function SnifferView({ engine }: { engine: Sniffer }) {
               : 'unverified';
 
     return (
-        <main>
+        <main className="sniffer-page">
             <div className="page-heading">
-                <h1>Sniffer</h1>
-                <span role="status">{state.status}</span>
+                <h1>Leaderboard Sniffer</h1>
+                {state.lurkMode && <strong className="lurk-mode-notice">LURK MODE ON (SCORES WILL NOT BE RECORDED)</strong>}
+                <div className="sniffer-actions">
+                    <span role="status">{state.status}</span>
+                    {song && <button id="snort" title="Force an immediate refresh of the data."
+                        disabled={!state.canSnort} onClick={() => engine.queueSnort()}>Snort</button>}
+                </div>
             </div>
-            {state.lurkMode && <p>Lurk mode is enabled. Scores will not be recorded.</p>}
             {state.error && <p role="status">{state.error}</p>}
             {song && (
                 <>
-                    <div className="song-info">
-                        <img
-                            className="coveralbum"
-                            src={`data:image/jpeg;base64,${song.albumArt}`}
-                            alt={`${song.albumName} cover`}
-                        />
-                        <div>
-                            <h2>
-                                {song.artistName} - {song.songName}
-                            </h2>
-                            <p>
-                                {song.albumName} ({song.albumYear})
-                            </p>
-                            <p>
-                                Version {song.toolkit.version} - {song.toolkit.author}
-                            </p>
-                        </div>
-                        {state.newVersion && (
-                            <button onClick={() => setPopup('version')}>New chart version</button>
-                        )}
-                    </div>
-                    <div className="live-data">
-                        <div className="live-heading">
-                            <span
-                                className="circle"
-                                style={{ backgroundColor: live?.active ? 'green' : 'red' }}
+                    <div className="sniffer-summary">
+                        <div className="song-info">
+                            <img
+                                className="coveralbum"
+                                src={`data:image/jpeg;base64,${song.albumArt}`}
+                                alt={`${song.albumName} cover`}
                             />
-                            <strong>Live Feed</strong>
+                            <div className="song-details">
+                                <h2 title={song.artistName}>{song.artistName}</h2>
+                                <h2 title={song.songName}>{song.songName}</h2>
+                                <p className="song-album" title={`${song.albumName} (${song.albumYear})`}>
+                                    {song.albumName} ({song.albumYear})
+                                </p>
+                                <p className="song-version" title={`Version ${song.toolkit.version} - ${song.toolkit.author}`}>
+                                    Version {song.toolkit.version} - {song.toolkit.author}
+                                </p>
+                                {state.newVersion && (
+                                    <button onClick={() => setPopup('version')}>New chart version</button>
+                                )}
+                            </div>
+                        </div>
+                        <div className="live-data">
+                            <div className="live-heading">
+                                <span
+                                    className="circle"
+                                    style={{ backgroundColor: live?.active ? 'green' : 'red' }}
+                                />
+                                <strong>Live Feed</strong>
+                            </div>
                             {state.verification !== VerificationState.None && (
                                 <button
-                                    className="text-button"
+                                    className="text-button live-verification"
                                     onClick={() => setPopup('verification')}
                                 >
                                     <img
@@ -74,21 +79,20 @@ function SnifferView({ engine }: { engine: Sniffer }) {
                                     />
                                 </button>
                             )}
+                            {notes && (
+                                <>
+                                    <span className="live-accuracy">
+                                        <b>Accuracy:</b> {notes.TotalNotesHit}/{notes.TotalNotes} ({Number(notes.Accuracy).toFixed(2)}%)
+                                    </span>
+                                    <span className="live-streak" title="Current / highest streak">
+                                        <b>Streak:</b> {notes.CurrentHitStreak}/{notes.HighestHitStreak}
+                                    </span>
+                                    <span className="live-time">
+                                        <b>Time:</b> {durationString(live.songTimer)}/{durationString(live.songLength)}
+                                    </span>
+                                </>
+                            )}
                         </div>
-                        {notes && (
-                            <div className="live-values">
-                                <span>
-                                    Notes: {notes.TotalNotesHit} / {notes.TotalNotes}
-                                </span>
-                                <span>Accuracy: {Number(notes.Accuracy).toFixed(2)}%</span>
-                                <span>Streak: {notes.CurrentHitStreak}</span>
-                                <span>Highest Streak: {notes.HighestHitStreak}</span>
-                                <span>
-                                    {durationString(live.songTimer)} /{' '}
-                                    {durationString(live.songLength)}
-                                </span>
-                            </div>
-                        )}
                     </div>
                     <div className="score-toolbar">
                         <ScoreFilters
@@ -96,6 +100,7 @@ function SnifferView({ engine }: { engine: Sniffer }) {
                             path={state.path}
                             mode={state.mode}
                             difficulty={state.difficulty}
+                            showLabels
                             onChange={(field, value) => engine.select(field, value)}
                         />
                         <ColumnPicker
@@ -107,13 +112,6 @@ function SnifferView({ engine }: { engine: Sniffer }) {
                             order={columns.order} onOrderChange={columns.changeOrder}
                             font={columns.font} onFontChange={columns.changeFont}
                         />
-                        <button
-                            id="snort"
-                            disabled={!state.canSnort}
-                            onClick={() => engine.queueSnort()}
-                        >
-                            Snort
-                        </button>
                     </div>
                     <div id="leaderboard_data">
                         {state.leaderboard.message && (
@@ -160,7 +158,7 @@ export function SnifferPage() {
 
     return (
         <main>
-            <h1>Sniffer</h1>
+            <h1>Leaderboard Sniffer</h1>
             <AsyncState loading={!error} error={error} retry={retry} />
             {error && (
                 <p>

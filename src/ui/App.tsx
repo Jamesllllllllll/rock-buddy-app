@@ -3,7 +3,6 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 
 import { SessionProvider, useSession, useAuth } from './Session';
 import { ThemeProvider } from './Theme';
 import { AppHeader, HeaderAccount } from './AppHeader';
-import { SnifferStatus } from '../sniffer/SnifferStatus';
 import { DesktopStatus } from './DesktopStatus';
 import { DesktopUpdates, DesktopVersion } from './DesktopUpdates';
 import { Footer } from './Footer';
@@ -120,7 +119,7 @@ function Shell() {
             <PageLoadingIndicator />
             <DesktopStatus />
             <SessionRuntime>
-                <AppHeader compact={state.status !== 'ready'} snifferStatus={state.status === 'ready' ? <SnifferStatus /> : undefined}>
+                <AppHeader compact={state.status !== 'ready'}>
                     <DesktopUpdates />
                     <HeaderAccount />
                 </AppHeader>

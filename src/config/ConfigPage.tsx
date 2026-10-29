@@ -262,6 +262,7 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                         ))}
                     </select>
                 </label>
+                <WindowSizeControls />
                 <hr />
                 <div className="config-row config-section-heading">
                     <h2>Sniffer</h2>
@@ -344,7 +345,6 @@ function ConfigForm({ initial, reload }: { initial: ConfigData; reload: () => vo
                     </button>
                 </div>
                 {checkbox('extra_logging', 'Extra Logging')}
-                <WindowSizeControls />
             </fieldset>
             {popup && (
                 <Modal

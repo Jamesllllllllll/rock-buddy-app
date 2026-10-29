@@ -34,20 +34,21 @@ export function ScoresTable({ scores, mode, hiddenColumns = [], columnWidths, on
     scores: Score[];
     mode: string;
     hiddenColumns?: ScoreColumn[];
-    columnWidths?: ColumnWidths;
+    columnWidths?: ColumnWidths | null;
     columnOrder?: ScoreColumn[];
     onColumnReorder?: (from: ScoreColumn, to: ScoreColumn) => void;
     font?: TableFont;
-    onColumnResize?: (id: ScoreColumn, width: number, save: boolean) => void;
+    onColumnResize?: (id: ScoreColumn, width: number, save: boolean, measured?: Partial<ColumnWidths>) => void;
 }) {
     const auth = useAuth();
     const [player, setPlayer] = useState<string>();
     const dragging = useRef<ScoreColumn | null>(null);
     const [dropTarget, setDropTarget] = useState<ScoreColumn>();
     const visibleColumns = scoreColumns(mode, columnOrder).filter(({ id }) => id === 'username' || !hiddenColumns.includes(id));
-    const resizable = columnWidths && onColumnResize;
-    const { table, minimums } = useColumnMinimums(!!resizable && scores.length > 0, visibleColumns.map(column => column.id).join(','), font);
-    const widthOf = (id: ScoreColumn) => Math.max(columnWidths?.[id] || 0, minimums[id] || 0);
+    const resizable = !!onColumnResize;
+    const fixedWidths = resizable && !!columnWidths;
+    const { table, minimums, measuredWidths } = useColumnMinimums(resizable && scores.length > 0, visibleColumns.map(column => column.id).join(','), font);
+    const widthOf = (id: ScoreColumn) => Math.max(columnWidths?.[id] ?? measuredWidths[id] ?? 64, minimums[id] || 0);
     const tableWidth = visibleColumns.reduce((total, { id }) => total + widthOf(id), 0);
     if (!scores.length)
         return (
@@ -58,8 +59,8 @@ export function ScoresTable({ scores, mode, hiddenColumns = [], columnWidths, on
 
     return (
         <>
-            <table ref={table} className={`leaderboard-data${resizable ? ' resizable-columns' : ''}`} style={{ ...(resizable ? { width: tableWidth } : {}), ...(font ? { fontFamily: tableFonts[font].family } : {}) }}>
-                {resizable && <colgroup>{visibleColumns.map(({ id }) => <col key={id} style={{ width: widthOf(id) }} />)}</colgroup>}
+            <table ref={table} className={`leaderboard-data${resizable ? ' resizable-columns' : ''}${fixedWidths ? ' fixed-columns' : ''}`} style={{ ...(fixedWidths ? { width: tableWidth } : {}), ...(font ? { fontFamily: tableFonts[font].family } : {}) }}>
+                {fixedWidths && <colgroup>{visibleColumns.map(({ id }) => <col key={id} style={{ width: widthOf(id) }} />)}</colgroup>}
                 <thead>
                     <tr>
                         {visibleColumns.map(({ id, label }) => (
@@ -87,7 +88,7 @@ export function ScoresTable({ scores, mode, hiddenColumns = [], columnWidths, on
                                     }}
                                     onDragEnd={() => { dragging.current = null; setDropTarget(undefined); }}>{label}</span>
                                 {resizable && <ColumnResizeHandle label={label} width={widthOf(id)} minimum={minimums[id]}
-                                    onResize={(width, save) => onColumnResize(id, width, save)} />}
+                                    onResize={(width, save) => onColumnResize!(id, width, save, measuredWidths)} />}
                             </th>
                         ))}
                     </tr>
@@ -99,7 +100,7 @@ export function ScoresTable({ scores, mode, hiddenColumns = [], columnWidths, on
                             className={score.user_id === auth.user_id ? 'current-user' : undefined}
                         >
                             {visibleColumns.map(({ id }) => (
-                                <td key={id} className={id === 'rank' ? 'rank-cell' : undefined}><ScoreCell column={id} score={score} onPlayer={setPlayer} /></td>
+                                <td key={id} data-column={id} className={id === 'rank' ? 'rank-cell' : id === 'playCount' && score.play_count == null ? 'unknown-value' : undefined}><ScoreCell column={id} score={score} onPlayer={setPlayer} /></td>
                             ))}
                         </tr>
                     ))}
@@ -182,43 +183,54 @@ export function ScoreFilters({
     mode,
     difficulty,
     onChange,
+    showLabels = false,
 }: {
     paths: string[];
     path: string;
     mode: string;
     difficulty: string;
     onChange: (field: 'path' | 'mode' | 'difficulty', value: string) => void;
+    showLabels?: boolean;
 }) {
     return (
         <div className="score-filters">
-            <select
-                aria-label="Game mode"
-                value={mode}
-                onChange={(event) => onChange('mode', event.target.value)}
-            >
-                <option value="las">Learn a Song</option>
-                <option value="sa">Score Attack</option>
-            </select>
-            <select
-                aria-label="Arrangement"
-                value={path}
-                onChange={(event) => onChange('path', event.target.value)}
-            >
-                {paths.map((name) => (
-                    <option value={name.toLowerCase()} key={name}>
-                        {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
-                    </option>
-                ))}
-            </select>
-            {mode === 'sa' && (
+            <label>
+                {showLabels && <span>Game Mode:</span>}
                 <select
-                    aria-label="Difficulty"
-                    value={difficulty}
-                    onChange={(event) => onChange('difficulty', event.target.value)}
+                    aria-label="Game mode"
+                    value={mode}
+                    onChange={(event) => onChange('mode', event.target.value)}
                 >
-                    <option value="hard">Hard</option>
-                    <option value="master">Master</option>
+                    <option value="las">Learn a Song</option>
+                    <option value="sa">Score Attack</option>
                 </select>
+            </label>
+            <label>
+                {showLabels && <span>Path:</span>}
+                <select
+                    aria-label="Arrangement"
+                    value={path}
+                    onChange={(event) => onChange('path', event.target.value)}
+                >
+                    {paths.map((name) => (
+                        <option value={name.toLowerCase()} key={name}>
+                            {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            {mode === 'sa' && (
+                <label>
+                    {showLabels && <span>Difficulty:</span>}
+                    <select
+                        aria-label="Difficulty"
+                        value={difficulty}
+                        onChange={(event) => onChange('difficulty', event.target.value)}
+                    >
+                        <option value="hard">Hard</option>
+                        <option value="master">Master</option>
+                    </select>
+                </label>
             )}
         </div>
     );

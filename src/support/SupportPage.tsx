@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { supportAmount } from '../support-amount';
 
 type CheckoutState =
@@ -69,6 +70,7 @@ export function SupportPage() {
     return (
         <main className="support-page">
             <h1>Support Rock Buddy</h1>
+            <p className="support-thanks">Thank you for supporting Rock Buddy. Your generosity helps keep this community project going.</p>
             {environment?.sandbox && <p id="sandbox-note" className="sandbox-note">PayPal sandbox · No real payments</p>}
 
             <form id="support-form" onSubmit={startCheckout}>
@@ -108,6 +110,7 @@ export function SupportPage() {
             </form>
 
             <button type="button" id="support-manage" className="text-button" onClick={manageSupport} disabled={submitting}>Manage monthly support</button>
+            <p><Link to="/team" replace>Back to Team</Link></p>
         </main>
     );
 }

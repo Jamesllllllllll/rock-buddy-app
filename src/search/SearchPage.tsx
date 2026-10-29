@@ -82,8 +82,8 @@ function SongDialog({ song, onClose }: { song: Song; onClose: () => void }) {
     const chart = charts.data?.[index];
 
     return (
-        <Modal title={`${song.artist} — ${song.title}`} onClose={onClose}>
-            <p>
+        <Modal title={`${song.artist} — ${song.title}`} className="song-dialog" onClose={onClose}>
+            <p className="song-metadata" title={`${song.album} (${song.year})`}>
                 {song.album} ({song.year})
             </p>
             <AsyncState {...charts} retry={charts.reload} />
@@ -129,14 +129,14 @@ function SearchResults({ query }: { query: string }) {
                     <tbody>
                         {results.data.map((item, index) => (
                             <tr key={index} onClick={() => setSong(item)}>
-                                <td>{item.artist}</td>
-                                <td>
+                                <td title={item.artist}>{item.artist}</td>
+                                <td title={item.title}>
                                     <button className="text-button" onClick={() => setSong(item)}>
                                         {item.title}
                                     </button>
                                 </td>
-                                <td>{item.album}</td>
-                                <td>{item.year}</td>
+                                <td title={item.album}>{item.album}</td>
+                                <td title={String(item.year)}>{item.year}</td>
                             </tr>
                         ))}
                     </tbody>

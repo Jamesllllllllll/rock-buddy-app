@@ -174,10 +174,11 @@ test('header navigates inside React and updates the active link', async () => {
     );
     assert.ok(!screen.queryByText('Beta'));
     assert.equal(screen.getByRole('link', { name: 'Search' }).getAttribute('aria-current'), 'page');
-    fireEvent.click(screen.getByRole('link', { name: 'Support' }));
+    assert.ok(!screen.queryByRole('link', { name: 'Support' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Rank' }));
     await waitFor(() =>
         assert.equal(
-            screen.getByRole('link', { name: 'Support' }).getAttribute('aria-current'),
+            screen.getByRole('link', { name: 'Rank' }).getAttribute('aria-current'),
             'page',
         ),
     );
@@ -194,7 +195,7 @@ test('support derives validation from the amount and does not create checkout in
     });
     render(
         <StrictMode>
-            <SupportPage />
+            <MemoryRouter><SupportPage /></MemoryRouter>
         </StrictMode>,
     );
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
@@ -221,7 +222,7 @@ test('checkout prevents duplicate submissions and requires explicit approval-ope
             return response.promise;
         },
     });
-    render(<SupportPage />);
+    render(<MemoryRouter><SupportPage /></MemoryRouter>);
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(button.disabled, false));
     fireEvent.click(screen.getByRole('radio', { name: 'Monthly' }));
@@ -244,7 +245,7 @@ test('successful browser opening asks for approval without claiming a completed 
         supportInfo: async () => ({ sandbox: false }),
         startSupportCheckout: async () => ({ opened: true }),
     });
-    render(<SupportPage />);
+    render(<MemoryRouter><SupportPage /></MemoryRouter>);
     const button = screen.getByRole('button', { name: 'Continue to PayPal' }) as HTMLButtonElement;
     await waitFor(() => assert.equal(button.disabled, false));
     assert.ok(!screen.queryByText(/PayPal sandbox/));
@@ -263,7 +264,7 @@ test('unavailable support stays disabled and reports the error', async () => {
             throw new Error('Unavailable');
         },
     });
-    render(<SupportPage />);
+    render(<MemoryRouter><SupportPage /></MemoryRouter>);
     await waitFor(() =>
         assert.match(screen.getByRole('status').textContent || '', /Support is unavailable/),
     );
@@ -291,7 +292,9 @@ test('the footer shows the current year and cleans up its refresh timer in Stric
                 <Footer />
             </StrictMode>,
         );
-        assert.ok(screen.getByText(`Copyright © ${new Date().getFullYear()} TNTMusicStudios`));
+        const link = screen.getByRole('link', { name: 'TNTMusicStudios' });
+        assert.equal(link.getAttribute('href'), 'mailto:tntmusicstudios2018@gmail.com');
+        assert.equal(link.closest('p')!.textContent, `Copyright © ${new Date().getFullYear()} TNTMusicStudios`);
         assert.equal(timers.size, 1);
         view.unmount();
         assert.equal(timers.size, 0);

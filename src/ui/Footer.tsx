@@ -18,7 +18,12 @@ export function Footer({ children, links }: { children?: ReactNode; links?: Reac
     return (
         <footer>
             {children}
-            <p>Copyright &copy; {year} TNTMusicStudios</p>
+            <p>Copyright &copy; {year}{' '}
+                <a href="mailto:tntmusicstudios2018@gmail.com" onClick={event => {
+                    event.preventDefault();
+                    window.api.openExternalLink(event.currentTarget.href);
+                }}>TNTMusicStudios</a>
+            </p>
             {links}
         </footer>
     );

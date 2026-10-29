@@ -22,20 +22,22 @@ const defaultWidths: ColumnWidths = {
 };
 
 // Only known columns and reasonable pixel widths are restored from local settings.
-function readColumnWidths(key: string): ColumnWidths {
+function readColumnWidths(key: string): ColumnWidths | null {
     const widths = { ...defaultWidths };
+    let customized = false;
     try {
         const saved = JSON.parse(window.localStorage.getItem(key) || '{}');
         for (const { id } of columns) {
             const value = saved?.[id];
             if (Number.isInteger(value) && value >= MIN_COLUMN_WIDTH && value <= MAX_COLUMN_WIDTH) {
                 widths[id] = value;
+                customized = true;
             }
         }
     } catch {
         // Missing or damaged settings use the normal layout.
     }
-    return widths;
+    return customized ? widths : null;
 }
 
 export const tableFonts = {
@@ -115,8 +117,8 @@ export function useSnifferColumns(userId: number) {
     }
 
     // Dragging updates the view immediately; only the completed adjustment is saved.
-    function resize(id: ScoreColumn, width: number, save: boolean) {
-        const next = { ...widths, [id]: width };
+    function resize(id: ScoreColumn, width: number, save: boolean, measured?: Partial<ColumnWidths>) {
+        const next = { ...defaultWidths, ...measured, ...widths, [id]: width };
         setWidths(next);
         if (save) saveWidths(next);
     }
@@ -131,8 +133,13 @@ export function useSnifferColumns(userId: number) {
     }
 
     function resetWidths() {
-        setWidths({ ...defaultWidths });
-        saveWidths(defaultWidths);
+        setWidths(null);
+        setError('');
+        try {
+            window.localStorage.removeItem(widthKey);
+        } catch {
+            setError("Couldn't save column widths for next time.");
+        }
     }
 
     function changeOrder(next: ScoreColumn[]) {

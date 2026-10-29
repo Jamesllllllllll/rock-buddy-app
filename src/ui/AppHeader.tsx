@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useSession } from './Session';
 import { HeaderThemeChooser } from './Theme';
 
-const pages = ['Sniffer', 'Search', 'Rank', 'Profile', 'Config', 'Account', 'Support'];
+const pages = ['Sniffer', 'Search', 'Rank', 'Profile', 'Config', 'Account'];
 
 // Offer a way back to login on public pages, or sign out of the current session.
 export function HeaderAccount() {
@@ -41,8 +41,8 @@ export function HeaderAccount() {
     );
 }
 
-export function AppHeader({ compact = false, children, snifferStatus }: { compact?: boolean; children?: ReactNode; snifferStatus?: ReactNode }) {
-    const links = compact ? ['Support'] : pages;
+export function AppHeader({ compact = false, children }: { compact?: boolean; children?: ReactNode }) {
+    const links = compact ? [] : pages;
     return (
         <nav className="navtop" aria-label="Main navigation">
             <div className="header-brand">
@@ -56,11 +56,9 @@ export function AppHeader({ compact = false, children, snifferStatus }: { compac
                     className="header-tab"
                     to={`/${name.toLowerCase()}`}
                     aria-label={name}
-                    aria-describedby={name === 'Sniffer' && snifferStatus ? 'sniffer-status-tooltip' : undefined}
                     style={compact ? { marginLeft: 'auto' } : undefined}
                 >
                     {name}
-                    {name === 'Sniffer' && snifferStatus}
                 </NavLink>
                 </Fragment>
             ))}

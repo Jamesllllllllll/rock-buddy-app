@@ -33,6 +33,19 @@ advertised as fixed by this release.
 
 ## Release sequence
 
+The October 29 UI review restores the compact layout and Sniffer Live Feed position,
+automatic default column sizing, Search truncation/tooltips, heading alignment and
+the footer contact link. Column customization remains available. Window dimensions
+apply on change. Donations are reached from Team, with a return link on Support;
+the main menu has no Support link or Sniffer indicator.
+
+Local Windows validation: 121 tests and the native development build pass.
+The development app was compared alongside installed 1.11.0, including the same
+already-loaded song, immediate window resizing and Team/Support navigation.
+This UI comparison does not verify a completed gameplay upload, an installed
+upgrade, restart persistence, or a PayPal transaction. Those acceptance checks
+remain separate; no installer is produced by these UI changes.
+
 1. Test the rehearsal Beta and record the remaining Windows checks. Tests already
    completed on this React version carry forward unless related code changes.
 2. Prepare a production-connected candidate with `installer=production-beta` and
@@ -146,7 +159,7 @@ Local mode is available separately and does not contain the imported database.
 The navigation header has no Beta badge. Test builds still use the separate Beta
 installation, rehearsal backend and test update feed; test changes are discarded.
 
-The Support header link opens a bundled desktop page with one-time/monthly choices and
+The Team page's Make a donation link opens a bundled desktop page with one-time/monthly choices and
 an amount in USD. Values below $5 disable checkout. No iframe or remote page is
 embedded. The main process retrieves the existing website form's signed state and
 submits its checkout request; HTML is never rendered in the app. This preserves
@@ -357,10 +370,11 @@ so check Windows installer/publisher prompts during acceptance.
   upload. Config always rereads local settings/profile discovery; PayPal still
   checks its environment before enabling checkout.
 - On Sniffer, use Columns to hide/show table fields and restore them with Show all.
-  Drag header dividers to resize columns, or focus a divider and use the arrow keys.
+  Columns fill the available width by default. Drag header dividers to resize columns,
+  or focus a divider and use the arrow keys. The first resize preserves neighboring widths.
   Headings must stay fully visible at the minimum width, including after font changes.
   Confirm widths and visibility survive navigation/restart, stay separate between accounts,
-  and leave Search's leaderboard unchanged. Reset widths must keep hidden columns hidden.
+  and leave Search's leaderboard unchanged. Reset widths restores automatic sizing and keeps hidden columns hidden.
   Drag column headings to reorder, or use the left/right buttons in Columns.
   Choose a table font and confirm order/font survive restart without affecting Search.
   Reset order must preserve widths, hidden columns and font.
@@ -369,8 +383,9 @@ so check Windows installer/publisher prompts during acceptance.
   size and position, including monitors left of or above the primary display.
   Repeat after logout, with maximized/minimized windows, different Windows display
   scaling, and after disconnecting a monitor. The main process saves normal bounds
-  and maximized state per installation/backend; resize the window directly or enter exact Width/Height in Config and click
-  Apply size. The minimum is 640 × 480. Rankings use four columns on wide windows
+  and maximized state per installation/backend; resize the window directly or edit Width/Height
+  below the Rocksmith profile in Config. Valid values apply as they change, without an Apply button.
+  The minimum is 640 × 480. Rankings use four columns on wide windows
   and two below 960px. Card text and spacing follow the column's width, so wider
   two-column cards regain larger text. Check all themes
   at the minimum size. These are outer dimensions in display-scaled pixels; applying them
