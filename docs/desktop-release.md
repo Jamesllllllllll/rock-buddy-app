@@ -127,7 +127,8 @@ merge and publish official releases. Neither merge nor a manual build publishes.
    accounts/scores, live PayPal, regular settings and TNT's update feed.
 2. Jimmy downloads the candidate from its fork release page, installs it and
    completes the Windows checks below. Keep one machine on this version for the
-   later automatic-update test. Record acceptance before marking PR #89 ready.
+   later automatic-update test. PR #89 is ready for review; record the remaining
+   Windows acceptance before release.
 3. TNT opens [PR #89](https://github.com/tnt-coders/rock-buddy-app/pull/89), approves
    any pending workflow run using **Approve and run**, reviews, and merges after
    the checks pass. Wait for the checks on `main` too. Merging does not publish.
@@ -340,8 +341,9 @@ queried chart, so its unlocked fallback to Lead matches the existing behavior.
 
 Installed upgrade/restart, the new lock during gameplay, history imports, Discord
 presence, account switching and payment handoff still need remaining Windows
-acceptance. The PR stays draft until those results are recorded. No official
-update can be tested end to end until TNT publishes the next version.
+acceptance. PR #89 is ready for review at Jimmy’s request; these remaining checks are not
+implied to have passed. No official update can be tested end to end until TNT
+publishes the next version.
 
 Rehearsal beta6 and its `desktop-beta/beta.yml` update feed are unchanged. Installing
 the official candidate does not transfer rehearsal scores or settings.
@@ -441,8 +443,9 @@ can have its dimensions controlled by Hyprland.
 
 Leave an older Beta installed so its updater performs the upgrade. Restart the
 app to check immediately; beta3 also has Check for updates in the changelog.
-Windows upgrade and gameplay acceptance are still pending. The upstream PR
-remains draft, and no production installer has been published.
+At the beta6 stage, Windows upgrade and gameplay acceptance were pending and
+the PR was still draft. See the current candidate and release sequence above
+for today’s review status and production-connected installer.
 
 Test A → B on Windows before public release: install A manually, retain login and
 settings, publish the chosen higher B to the test feed, check/download B, choose
